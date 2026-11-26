@@ -76,6 +76,30 @@ or part-time; location must be one of your towns, US-remote, or hybrid; obvious 
 description (5+ years required, security clearance) are dropped with a reason you can see under
 "Show filtered out" on Today. Borderline cases are kept for the AI score in milestone 3.
 
+## Deploy (all free tiers)
+
+1. **GitHub** — the repo; `ci.yml` tests every push and `daily.yml` runs the job feed each morning.
+2. **Supabase** — create a project (sign up with the same email you'll sign in with: the free
+   email sender only delivers to your own Supabase team). Then, from the repo root:
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <your-project-ref>
+   npx supabase db push                     # applies supabase/migrations
+   ```
+   In the dashboard → Authentication: turn **off** "Allow new users to sign up", and set the
+   Site URL to your Vercel URL (also add it under Redirect URLs).
+3. **Pipeline secrets** — fill in `pipeline/.env.production` (gitignored), then:
+   ```bash
+   cd pipeline
+   JOBSEARCH_ENV=production uv run jobsearch owner create --email you@example.com
+   JOBSEARCH_ENV=production uv run jobsearch profile push --note "first version"
+   cd .. && scripts/set-github-secrets.sh    # copies the two values into GitHub Actions secrets
+   ```
+4. **Vercel** — import the GitHub repo, set **Root Directory** to `web`, and add the environment
+   variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (the *publishable* key is safe
+   in the browser; never the secret one). `web/vercel.json` handles page routing.
+5. Run the feed once by hand: `gh workflow run daily.yml`, then open the site.
+
 ## Tests
 
 ```bash
