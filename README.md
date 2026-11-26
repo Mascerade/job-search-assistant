@@ -44,6 +44,10 @@ cover letter for each match, and tracks every application from "found" to "offer
 - **Workday runs on the Mac.** Workday rate-limits cloud servers, so `daily.yml` uses
   `--where cloud` and the Mac's `jobsearch local-daily` fetches Workday boards.
 - **Status history is automatic.** A trigger records every status change.
+- **Timing focus.** Until a date in Settings (default March 1, 2027) the daily 20 documents go to
+  software, then university tech, then program admin: admin roles usually hire weeks before the
+  start date, and the start has to be after graduation. Postings with a future start date (a
+  "2027 new grad" program) jump the line; staffing agencies always go last (`priority.py`).
 
 ## Run it locally
 

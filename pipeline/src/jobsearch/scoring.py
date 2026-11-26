@@ -21,7 +21,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, ValidationError
 
 from .llm import AuthExpiredError, ClaudeCode, LLMError, LLMResponse
-from .models import JobForScoring, Settings, Track
+from .models import FUTURE_START_TAG, JobForScoring, Settings, Track
 from .profile import Profile
 
 BATCH_SIZE = 10
@@ -205,7 +205,8 @@ def to_score_row(item: ScoreItem, settings: Settings, resp: LLMResponse, share: 
         "reason": item.reason.strip(),
         "track": item.track,
         "keep": item.score >= settings.fit_threshold,
-        "tags": ["immediate-start"] if item.immediate_start else [],
+        # Nearly every posting wants someone soon, so only the exception is tagged.
+        "tags": [] if item.immediate_start else [FUTURE_START_TAG],
         "details": {
             "years_required": item.years_required,
             "immediate_start": item.immediate_start,

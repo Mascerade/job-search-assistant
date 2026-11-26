@@ -7,10 +7,10 @@ from datetime import UTC, datetime
 import pytest
 
 from jobsearch.daily import load_staffing_agencies
-from jobsearch.db import direct_employers_first
 from jobsearch.digest import DigestJob
 from jobsearch.filters import is_staffing_agency
-from jobsearch.models import STAFFING_AGENCY_TAG, JobForScoring
+from jobsearch.models import STAFFING_AGENCY_TAG, JobForScoring, Settings
+from jobsearch.priority import tailoring_order
 
 KNOWN = load_staffing_agencies()  # the real config/staffing_agencies.yaml
 
@@ -65,23 +65,19 @@ def test_our_client_wording_counts_only_for_aggregator_postings() -> None:
     assert not agency("Acme Consulting", "to support our client’s AML integration")
 
 
-def job(id: str, score: int, *tags: str) -> JobForScoring:
-    return JobForScoring(id=id, company="X", title="T", tags=list(tags))
+def job(id: str, *tags: str) -> JobForScoring:
+    return JobForScoring(id=id, company="X", title="T", track="software", tags=list(tags))
 
 
 def test_agency_jobs_are_tailored_after_direct_employers() -> None:
     jobs = [  # as the database returns them: best fit first
-        job("agency-90", 90, STAFFING_AGENCY_TAG),
-        job("direct-80", 80),
-        job("agency-75", 75, STAFFING_AGENCY_TAG, "short-description"),
-        job("direct-60", 60, "location-unclear"),
+        job("agency-90", STAFFING_AGENCY_TAG),
+        job("direct-80"),
+        job("agency-75", STAFFING_AGENCY_TAG, "short-description"),
+        job("direct-60", "location-unclear"),
     ]
-    assert [j.id for j in direct_employers_first(jobs)] == [
-        "direct-80",
-        "direct-60",
-        "agency-90",
-        "agency-75",
-    ]
+    order = tailoring_order(jobs, Settings(focus_until=None))
+    assert [j.id for j in order] == ["direct-80", "direct-60", "agency-90", "agency-75"]
 
 
 def test_digest_marks_agency_postings() -> None:

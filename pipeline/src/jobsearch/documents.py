@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from .content import CoverLetterContent, ResumeContent, Tailored
 from .llm import AuthExpiredError, ClaudeCode, LLMError
 from .models import JobForScoring
+from .priority import tailoring_order
 from .profile import Profile
 from .render import RenderError, build_cover_letter, fit_one_page, to_pdf
 from .tailor import tailor
@@ -280,7 +281,7 @@ def run_tailoring(*, limit: int, dry_run: bool = False) -> TailoringSummary:
         summary.skipped_reason = "no master profile uploaded yet"
         return summary
     profile = Profile.model_validate(row.data)
-    jobs = db.jobs_to_tailor(limit=limit)
+    jobs = tailoring_order(db.jobs_to_tailor(), settings)[:limit]
     if dry_run or not jobs:
         summary.skipped_reason = f"dry run: would tailor {len(jobs)} jobs" if dry_run else None
         return summary

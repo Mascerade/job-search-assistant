@@ -134,7 +134,11 @@ def test_score_row_applies_threshold_and_splits_cost() -> None:
     hi = to_score_row(ScoreItem.model_validate(answer("a", 70)), SETTINGS, r, 0.5)
     lo = to_score_row(ScoreItem.model_validate(answer("b", 69)), SETTINGS, r, 0.5)
     assert hi["keep"] is True and lo["keep"] is False
-    assert hi["tags"] == ["immediate-start"]
+    assert hi["tags"] == []  # wants someone soon: the usual case, not tagged
+    future = to_score_row(
+        ScoreItem.model_validate(answer("c", 75) | {"immediate_start": False}), SETTINGS, r, 0.5
+    )
+    assert future["tags"] == ["future-start"]  # e.g. a 2027 new-grad program
     assert hi["input_tokens"] == 500 and hi["cost_usd"] == 0.001
 
 

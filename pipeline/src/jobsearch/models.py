@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal, TypedDict
 
 from pydantic import BaseModel, Field
@@ -81,6 +81,8 @@ class Posting(BaseModel):
 
 # Tag on postings from staffing / recruiting agencies (see config/staffing_agencies.yaml).
 STAFFING_AGENCY_TAG = "staffing-agency"
+# Tag on postings tied to a future start, e.g. a 2027 new-grad program (set by scoring).
+FUTURE_START_TAG = "future-start"
 
 
 class JobForScoring(BaseModel):
@@ -114,6 +116,10 @@ class Settings(BaseModel):
     fit_threshold: int = 50
     monthly_spend_cap_usd: float = 40
     tailor_daily_cap: int = 20
+    # Until this date, the daily tailoring goes software → hybrid → program admin (see
+    # priority.py): university admin roles hire weeks before the start date, and Kojo can't
+    # start until after graduating in May 2027. None = always plain best fit first.
+    focus_until: date | None = date(2027, 3, 1)
     experience_max_years: int = 2
     full_time_only: bool = True
     exclude_clearance: bool = True

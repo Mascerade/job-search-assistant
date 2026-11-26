@@ -1,6 +1,6 @@
 -- Tests for save_tailored and suggestion permissions. Run with: npx supabase test db
 begin;
-select plan(8);
+select plan(10);
 
 insert into auth.users (id, email, aud, role)
   values ('33333333-3333-3333-3333-333333333333', 'owner-doc@example.com', 'authenticated', 'authenticated');
@@ -27,6 +27,12 @@ select public.save_tailored('eeeeeeee-0000-0000-0000-000000000001',
   '{"resume": {"template": "admin", "content": {}}, "cover_letter": {"template": "admin", "content": {}}, "suggestions": []}'::jsonb);
 select is((select max(version) from public.documents where job_id = 'eeeeeeee-0000-0000-0000-000000000001' and kind = 'resume'),
   2, 'regenerating creates version 2');
+select is((select decision from public.suggestions where path = 'cover.paragraphs.1'
+           and document_id in (select id from public.documents where job_id = 'eeeeeeee-0000-0000-0000-000000000001')),
+  'superseded', 'the replaced version''s open suggestion is closed as superseded');
+select is((select count(*)::int from public.suggestions where decision = 'pending'
+           and document_id in (select id from public.documents where job_id = 'eeeeeeee-0000-0000-0000-000000000001')),
+  0, 'nothing left waiting for review after a regenerate without suggestions');
 
 -- The owner can approve and edit a suggestion, but not change what was suggested.
 set local role authenticated;

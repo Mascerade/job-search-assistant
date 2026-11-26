@@ -13,7 +13,8 @@ export function needsReview(job: Job): boolean {
 
 export const TAG_LABEL: Record<string, string> = {
   'location-unclear': 'Location unclear',
-  'immediate-start': 'Wants someone soon',
+  // Tied to a future start (e.g. a 2027 new-grad program), so the timing fits graduation.
+  'future-start': 'Future start date',
   // Adzuna only shares a snippet of the posting; the full text is behind the job link.
   'short-description': 'Short description',
   // Posted by a recruiting agency for another employer; tailored after direct-employer matches.

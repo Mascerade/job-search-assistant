@@ -11,6 +11,9 @@ import { useSaveSettings, useSettings } from '@/lib/queries'
 import { TRACK_LABEL, TRACK_ORDER } from '@/lib/status'
 import type { AppSettings, JobTrack } from '@/lib/types'
 
+// Matches the pipeline's Settings.focus_until default.
+const DEFAULT_FOCUS_UNTIL = '2027-03-01'
+
 const lines = (s: string) =>
   s
     .split('\n')
@@ -63,6 +66,7 @@ interface FormState {
   include_remote_us: boolean
   include_hybrid: boolean
   towns: string
+  focus_until: string
   tracks: Record<JobTrack, { enabled: boolean; keywords: string }>
 }
 
@@ -76,6 +80,8 @@ function toForm(s: AppSettings): FormState {
     include_remote_us: s.locations.include_remote_us,
     include_hybrid: s.locations.include_hybrid,
     towns: s.locations.towns.join('\n'),
+    // Missing = the pipeline's default (March 1, 2027); null = turned off.
+    focus_until: s.focus_until === undefined ? DEFAULT_FOCUS_UNTIL : (s.focus_until ?? ''),
     tracks: Object.fromEntries(
       (Object.keys(s.tracks) as JobTrack[]).map((t) => [
         t,
@@ -128,6 +134,7 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
       experience_max_years: Number(form.experience_max_years),
       full_time_only: form.full_time_only,
       exclude_clearance: form.exclude_clearance,
+      focus_until: form.focus_until || null,
       locations: {
         include_remote_us: form.include_remote_us,
         include_hybrid: form.include_hybrid,
@@ -192,6 +199,23 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
           <CardContent className="flex flex-col gap-4 border-t pt-4">
             <Toggle id="full_time_only" label="Full-time only" hint="Skip contract, temporary, part-time, and internship roles." checked={form.full_time_only} onChange={(v) => patch({ full_time_only: v })} />
             <Toggle id="exclude_clearance" label="Skip roles that need a security clearance" checked={form.exclude_clearance} onChange={(v) => patch({ exclude_clearance: v })} />
+          </CardContent>
+          <CardContent className="flex flex-col gap-1.5 border-t pt-4">
+            <Label htmlFor="focus_until">Software jobs first until</Label>
+            <Input
+              id="focus_until"
+              type="date"
+              className="w-44 font-mono tabular-nums"
+              value={form.focus_until}
+              onChange={(e) => patch({ focus_until: e.target.value })}
+              aria-describedby="focus_until-hint"
+            />
+            <p id="focus_until-hint" className="max-w-prose text-xs text-muted-foreground">
+              Until this date the daily resumes and cover letters go to software jobs first, then university tech,
+              then program admin (admin roles usually hire a few weeks before the start date). Jobs with a future
+              start date and best fits still lead each group; staffing agencies always come last. Clear it to go
+              by best fit only.
+            </p>
           </CardContent>
         </Card>
 

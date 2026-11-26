@@ -28,5 +28,7 @@ export interface AppSettings {
   full_time_only: boolean
   exclude_clearance: boolean
   tracks: Record<JobTrack, { enabled: boolean; keywords: string[] }>
+  /** YYYY-MM-DD. Until then the daily documents go software → hybrid → admin; null = best fit. */
+  focus_until?: string | null
   locations: { include_remote_us: boolean; include_hybrid: boolean; towns: string[] }
 }
