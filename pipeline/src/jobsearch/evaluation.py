@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from .config import REPO_DIR
 from .scoring import JobForScoring
@@ -50,6 +50,24 @@ class EvalItem(BaseModel):
     snippet: str = ""
     label: Label | None = None
     note: str = ""
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def _normalize_label(cls, v: object) -> object:
+        # YAML reads a bare `yes` / `no` as true / false (the "Norway problem").
+        if v is True:
+            return "yes"
+        if v is False:
+            return "no"
+        if isinstance(v, str):
+            t = v.strip().lower()
+            return {"y": "yes", "n": "no", "m": "maybe", "": None}.get(t, t)
+        return v
+
+    @field_validator("note", mode="before")
+    @classmethod
+    def _note_text(cls, v: object) -> object:
+        return "" if v is None else str(v)
 
 
 def sample(jobs: Sequence[JobForScoring], n: int, seed: int = 7) -> list[JobForScoring]:

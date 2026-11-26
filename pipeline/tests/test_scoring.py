@@ -187,3 +187,16 @@ def test_snippet_skips_company_boilerplate() -> None:
     )
     assert snippet(desc).startswith("What you'll do: build internal tools")
     assert snippet("Short role text.") == "Short role text."
+
+
+def test_eval_labels_survive_yaml_booleans(tmp_path: Path) -> None:
+    from jobsearch.evaluation import read_labels_file
+
+    f = tmp_path / "labels.yaml"
+    f.write_text(
+        "- {job_id: a, company: A, title: T, label: yes}\n"
+        "- {job_id: b, company: B, title: T, label: no, note: 42}\n"
+        "- {job_id: c, company: C, title: T, label: Maybe}\n"
+        "- {job_id: d, company: D, title: T, label: null}\n"
+    )
+    assert [i.label for i in read_labels_file(f)] == ["yes", "no", "maybe", None]
