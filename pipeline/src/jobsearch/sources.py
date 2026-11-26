@@ -20,7 +20,7 @@ from typing import Any
 import httpx
 
 from .config import ConfigError
-from .filters import normalize_employment, salary_from_text
+from .filters import dedupe_key, normalize_employment, salary_from_text
 from .http import Http
 from .models import Board, EmploymentType, Posting, RemoteType
 from .text import html_to_text
@@ -527,7 +527,7 @@ ADZUNA_SEARCH = "https://api.adzuna.com/v1/api/jobs/us/search/{page}"
 ADZUNA_PAGE = 50
 ADZUNA_MAX_PAGES = 2  # per search term
 ADZUNA_MAX_DAYS_OLD = 14
-ADZUNA_DISTANCE = 25  # around Board.token; the town filter does the precise cut
+ADZUNA_DISTANCE = 25  # miles around Board.token (checked live); the town filter does the precise cut
 
 _ADZUNA_EMPLOYMENT: dict[str, EmploymentType] = {
     "full_time": "full_time",
@@ -565,10 +565,11 @@ def _adzuna_posting(board: Board, r: JsonObject) -> Posting | None:
     if not (title and company and native_id):
         return None
     loc = r.get("location") or {}
-    place = _one_line(loc.get("display_name"))
-    area = [a for a in loc.get("area") or [] if isinstance(a, str)]
-    if len(area) >= 2 and area[1] not in place:  # "Cambridge, Middlesex County" + ", Massachusetts"
-        place = f"{place}, {area[1]}" if place else area[1]
+    # area runs country → state → county → town (→ neighborhood): ["US", "Massachusetts",
+    # "Middlesex County", "Cambridge"]. Most specific first keeps the town in the string even
+    # when display_name is just a neighborhood ("Harvard Square, Middlesex County").
+    area = [a.strip() for a in loc.get("area") or [] if isinstance(a, str) and a.strip()]
+    place = ", ".join(reversed(area[1:])) if len(area) >= 2 else _one_line(loc.get("display_name"))
     predicted = str(r.get("salary_is_predicted") or "0") == "1"  # Adzuna's own estimate: ignore
     return Posting(
         source="adzuna",
@@ -591,6 +592,7 @@ def _adzuna_posting(board: Board, r: JsonObject) -> Posting | None:
 def fetch_adzuna(board: Board, http: Http) -> list[Posting]:
     app_id, app_key = adzuna_keys()
     found: dict[str, Posting] = {}
+    same_job: set[str] = set()  # Adzuna often lists one job several times under different ids
     for term in board.search_terms:
         for page in range(1, ADZUNA_MAX_PAGES + 1):
             params: dict[str, str | int] = {
@@ -610,8 +612,10 @@ def fetch_adzuna(board: Board, http: Http) -> list[Posting]:
             results = data.get("results") or []
             for r in results:
                 p = _adzuna_posting(board, r)
-                if p is not None:
-                    found.setdefault(p.native_id, p)
+                if p is None or p.native_id in found or dedupe_key(p) in same_job:
+                    continue
+                found[p.native_id] = p
+                same_job.add(dedupe_key(p))
             if len(results) < ADZUNA_PAGE:
                 break
     return list(found.values())

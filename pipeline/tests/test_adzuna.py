@@ -82,7 +82,7 @@ def test_fetches_a_second_page_only_when_the_first_is_full() -> None:
         pages.append(page)
         base = FIXTURE["results"][0]
         n = ADZUNA_PAGE if page == "1" else 3
-        results = [{**base, "id": f"{page}-{i}"} for i in range(n)]
+        results = [{**base, "id": f"{page}-{i}", "title": f"Software Engineer {page}-{i}"} for i in range(n)]
         return httpx.Response(200, json={"results": results})
 
     postings = fetch(BOARD, http_returning(handler))
@@ -132,3 +132,28 @@ def test_aggregator_rows_are_tagged_short_description() -> None:
     assert row["tags"] == ["location-unclear", "short-description"]
     assert row["source"] == "adzuna"
     assert row["source_job_id"] == "Boston:4400000001"
+
+
+def test_neighborhood_places_keep_their_town() -> None:
+    from jobsearch.sources import _adzuna_posting
+
+    raw = {
+        **FIXTURE["results"][0],
+        "location": {
+            "display_name": "Harvard Square, Middlesex County",
+            "area": ["US", "Massachusetts", "Middlesex County", "Cambridge", "Harvard Square"],
+        },
+    }
+    p = _adzuna_posting(BOARD, raw)
+    assert p is not None
+    assert p.locations == ["Harvard Square, Cambridge, Middlesex County, Massachusetts"]
+
+
+def test_the_same_job_listed_twice_is_kept_once() -> None:
+    first = FIXTURE["results"][0]
+    twin = {**first, "id": "4400000999"}  # same company, title, and place; different Adzuna id
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"results": [first, twin]})
+
+    assert [p.native_id for p in fetch(BOARD, http_returning(handler))] == ["4400000001"]
