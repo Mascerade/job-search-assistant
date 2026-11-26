@@ -17,10 +17,9 @@ from pydantic import BaseModel, TypeAdapter
 from supabase import Client, create_client
 
 from .config import load_config
-from .models import JobRow, Settings
-from .scoring import JobForScoring
+from .models import JobForScoring, JobRow, Settings
 
-RunKind = Literal["daily", "local", "scoring", "on_demand"]
+RunKind = Literal["daily", "local", "scoring", "tailoring", "tasks", "on_demand"]
 RunStatus = Literal["running", "succeeded", "failed"]
 
 
@@ -243,3 +242,135 @@ class _UrlRow(BaseModel):
 def job_urls(ids: list[str]) -> dict[str, str | None]:
     data = client().table("jobs").select("id, url").in_("id", ids).execute().data
     return {r.id: r.url for r in _rows(data, _UrlRow)}
+
+
+# ---------------------------------------------------------------------------
+# Tailored documents (milestone 4)
+# ---------------------------------------------------------------------------
+
+DOCUMENTS_BUCKET = "documents"
+
+
+class DocumentRow(BaseModel):
+    id: str
+    kind: Literal["resume", "cover_letter"]
+    version: int
+    state: str
+    content: dict[str, Any]
+
+
+class DecisionRow(BaseModel):
+    document_id: str
+    path: str
+    decision: Literal["pending", "approved", "rejected"]
+    final_text: str | None = None
+
+
+class JobHeader(BaseModel):
+    company: str
+    title: str
+
+
+class TaskRow(BaseModel):
+    id: str
+    job_id: str | None
+    kind: Literal["ingest", "tailor", "render", "regenerate"]
+
+
+def save_tailored(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    resp = client().rpc("save_tailored", {"job": job_id, "payload": payload}).execute()
+    return TypeAdapter(dict[str, Any]).validate_python(resp.data)
+
+
+def latest_documents(job_id: str) -> dict[str, DocumentRow]:
+    data = (
+        client()
+        .table("documents")
+        .select("id, kind, version, state, content")
+        .eq("job_id", job_id)
+        .order("version", desc=True)
+        .execute()
+        .data
+    )
+    latest: dict[str, DocumentRow] = {}
+    for row in _rows(data, DocumentRow):
+        latest.setdefault(row.kind, row)
+    return latest
+
+
+def suggestion_decisions(document_ids: list[str]) -> list[DecisionRow]:
+    data = (
+        client()
+        .table("suggestions")
+        .select("document_id, path, decision, final_text")
+        .in_("document_id", document_ids)
+        .execute()
+        .data
+    )
+    return _rows(data, DecisionRow)
+
+
+def job_header(job_id: str) -> JobHeader:
+    return JobHeader.model_validate(
+        client().table("jobs").select("company, title").eq("id", job_id).single().execute().data
+    )
+
+
+def upload_file(key: str, data: bytes, content_type: str) -> str:
+    client().storage.from_(DOCUMENTS_BUCKET).upload(
+        key, data, {"content-type": content_type, "upsert": "true"}
+    )
+    return key
+
+
+def mark_rendered(document_id: str, *, docx_path: str, pdf_path: str) -> None:
+    client().table("documents").update({"state": "final", "docx_path": docx_path, "pdf_path": pdf_path}).eq(
+        "id", document_id
+    ).execute()
+
+
+def mark_job_documents_ready(job_id: str) -> None:
+    """Pipeline: ready. Application status: "Docs ready", unless Kojo already moved it."""
+    client().table("jobs").update({"pipeline_state": "ready"}).eq("id", job_id).execute()
+    client().table("jobs").update({"status": "docs_ready"}).eq("id", job_id).eq("status", "new").execute()
+
+
+def mark_job_error(job_id: str) -> None:
+    client().table("jobs").update({"pipeline_state": "error"}).eq("id", job_id).execute()
+
+
+def jobs_to_tailor(limit: int) -> list[JobForScoring]:
+    """Open matches without documents that Kojo hasn't acted on, best fit first."""
+    data = (
+        client()
+        .table("jobs")
+        .select(_SCORING_COLUMNS)
+        .eq("pipeline_state", "scored")
+        .eq("status", "new")
+        .is_("closed_at", "null")
+        .order("fit_score", desc=True)
+        .limit(limit)
+        .execute()
+        .data
+    )
+    return _rows(data, JobForScoring)
+
+
+def queued_tasks(limit: int) -> list[TaskRow]:
+    data = (
+        client()
+        .table("tasks")
+        .select("id, job_id, kind")
+        .eq("step", "queued")
+        .order("created_at")
+        .limit(limit)
+        .execute()
+        .data
+    )
+    return _rows(data, TaskRow)
+
+
+def update_task(
+    task_id: str, step: Literal["writing", "rendering", "ready", "error"], error: str | None = None
+) -> None:
+    client().table("tasks").update({"step": step, "error": error}).eq("id", task_id).execute()

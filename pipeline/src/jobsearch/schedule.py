@@ -25,6 +25,12 @@ from .llm import claude_binary
 LABEL = "com.jobsearchassistant.local-daily"
 PLIST = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
 LOG = Path.home() / "Library" / "Logs" / "jobsearch-local-daily.log"
+# A second, tiny agent: every 10 minutes, handle button presses from the website
+# (render after approval, regenerate, tailor now). Exits immediately when there are none.
+TASKS_LABEL = "com.jobsearchassistant.tasks"
+TASKS_PLIST = Path.home() / "Library" / "LaunchAgents" / f"{TASKS_LABEL}.plist"
+TASKS_LOG = Path.home() / "Library" / "Logs" / "jobsearch-tasks.log"
+TASKS_EVERY_S = 600
 
 
 def _domain() -> str:
@@ -49,6 +55,19 @@ def plist_dict(hour: int, minute: int, uv: str, claude: str) -> dict[str, Any]:
     }
 
 
+def tasks_plist_dict(uv: str, claude: str) -> dict[str, Any]:
+    d = plist_dict(0, 0, uv, claude)
+    del d["StartCalendarInterval"]
+    d.update(
+        Label=TASKS_LABEL,
+        ProgramArguments=[uv, "run", "--project", str(PIPELINE_DIR), "jobsearch", "tasks"],
+        StartInterval=TASKS_EVERY_S,
+        StandardOutPath=str(TASKS_LOG),
+        StandardErrorPath=str(TASKS_LOG),
+    )
+    return d
+
+
 def _launchctl(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["launchctl", *args], capture_output=True, text=True, check=False)
 
@@ -60,20 +79,23 @@ def install(hour: int = 7, minute: int = 30) -> Path:
     data = plist_dict(hour, minute, uv, claude_binary())
     PLIST.parent.mkdir(parents=True, exist_ok=True)
     LOG.parent.mkdir(parents=True, exist_ok=True)
-    PLIST.write_bytes(plistlib.dumps(data))
-    _launchctl("bootout", _domain(), str(PLIST))  # reload if it was already installed
-    result = _launchctl("bootstrap", _domain(), str(PLIST))
-    if result.returncode != 0:
-        raise RuntimeError(f"launchctl bootstrap failed: {result.stderr.strip()}")
+    for plist, contents in ((PLIST, data), (TASKS_PLIST, tasks_plist_dict(uv, claude_binary()))):
+        plist.write_bytes(plistlib.dumps(contents))
+        _launchctl("bootout", _domain(), str(plist))  # reload if it was already installed
+        result = _launchctl("bootstrap", _domain(), str(plist))
+        if result.returncode != 0:
+            raise RuntimeError(f"launchctl bootstrap failed for {plist.name}: {result.stderr.strip()}")
     return PLIST
 
 
 def uninstall() -> bool:
-    _launchctl("bootout", _domain(), str(PLIST))
-    if PLIST.exists():
-        PLIST.unlink()
-        return True
-    return False
+    removed = False
+    for plist in (PLIST, TASKS_PLIST):
+        _launchctl("bootout", _domain(), str(plist))
+        if plist.exists():
+            plist.unlink()
+            removed = True
+    return removed
 
 
 def run_now() -> None:
@@ -97,6 +119,11 @@ def status() -> str:
     when = plistlib.loads(PLIST.read_bytes()).get("StartCalendarInterval", {})
     lines.append(
         f"Runs daily at {when.get('Hour', 0):02d}:{when.get('Minute', 0):02d} (or on wake if asleep then)"
+    )
+    tasks_state = _launchctl("print", f"{_domain()}/{TASKS_LABEL}")
+    lines.append(
+        f"Task checker (every {TASKS_EVERY_S // 60} min): "
+        + ("loaded" if tasks_state.returncode == 0 else "not loaded — run `schedule install`")
     )
     if LOG.exists():
         tail = LOG.read_text(errors="replace").splitlines()[-8:]

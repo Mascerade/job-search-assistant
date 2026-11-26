@@ -45,7 +45,7 @@ export function RunsPage() {
         <Skeleton className="h-48 w-full" />
       ) : !runs?.length ? (
         <EmptyState icon={Activity} title="No runs yet">
-          The daily search starts in milestone 2. Each run will be logged here with what it found and what it cost.
+          Each run of the daily search, scoring, and tailoring is logged here with what it did.
         </EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-xl border bg-card">

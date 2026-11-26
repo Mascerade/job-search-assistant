@@ -2,6 +2,7 @@ import type { Job } from './types'
 
 /** Jobs the pipeline rejected stay out of Today and the Board unless you've acted on them. */
 export function isAutoRejected(job: Job): boolean {
+  if (job.source === 'manual') return false // jobs you add yourself always stay visible
   return job.status === 'new' && (job.pipeline_state === 'filtered_out' || job.pipeline_state === 'below_threshold')
 }
 

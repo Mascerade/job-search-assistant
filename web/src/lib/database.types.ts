@@ -155,14 +155,14 @@ isOneToOne: false
                   ]
                 },"suggestions": {
                   Row: {
-                    "created_at": string,"decided_at": string | null,"decision": string,"document_id": string,"id": string,"original_text": string | null,"path": string,"rationale": string,"suggested_text": string
+                    "created_at": string,"decided_at": string | null,"decision": string,"document_id": string,"final_text": string | null,"id": string,"original_text": string | null,"path": string,"rationale": string,"suggested_text": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"decided_at"?: string | null,"decision"?: string,"document_id": string,"id"?: string,"original_text"?: string | null,"path": string,"rationale": string,"suggested_text": string
+                    "created_at"?: string,"decided_at"?: string | null,"decision"?: string,"document_id": string,"final_text"?: string | null,"id"?: string,"original_text"?: string | null,"path": string,"rationale": string,"suggested_text": string
                   }
                   Update: {
-                    "created_at"?: string,"decided_at"?: string | null,"decision"?: string,"document_id"?: string,"id"?: string,"original_text"?: string | null,"path"?: string,"rationale"?: string,"suggested_text"?: string
+                    "created_at"?: string,"decided_at"?: string | null,"decision"?: string,"document_id"?: string,"final_text"?: string | null,"id"?: string,"original_text"?: string | null,"path"?: string,"rationale"?: string,"suggested_text"?: string
                   }
                   Relationships: [
                     {
@@ -207,6 +207,12 @@ isOneToOne: false
                            },
 "is_owner":
 { Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"record_scores":
+{ Args: { "scores": Json }; Returns: number
+                           },
+"save_tailored":
+{ Args: { "job": string,"payload": Json }; Returns: Json
                            }
           }
           Enums: {

@@ -86,7 +86,14 @@ const columns = helper.columns([
   helper.accessor('status', {
     header: 'Status',
     enableSorting: false,
-    cell: ({ row }) => <StatusBadge status={row.original.status} />,
+    cell: ({ row }) => (
+      <span className="flex flex-col items-start gap-1">
+        <StatusBadge status={row.original.status} />
+        {row.original.pipeline_state === 'needs_approval' && (
+          <span className="text-xs font-medium whitespace-nowrap text-warning-text">Review suggestions</span>
+        )}
+      </span>
+    ),
   }),
 ])
 

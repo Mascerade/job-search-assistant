@@ -64,6 +64,19 @@ class Posting(BaseModel):
         return "; ".join(self.locations) or None
 
 
+class JobForScoring(BaseModel):
+    id: str
+    company: str
+    title: str
+    location: str | None = None
+    remote_type: str | None = None
+    employment_type: str | None = None
+    salary_min: int | None = None
+    salary_max: int | None = None
+    track: Track | None = None
+    description: str | None = None
+
+
 class TrackSettings(BaseModel):
     enabled: bool = True
     keywords: list[str] = Field(default_factory=list)
@@ -78,8 +91,9 @@ class LocationSettings(BaseModel):
 class Settings(BaseModel):
     """Mirror of settings.data in the database (edited on the website)."""
 
-    fit_threshold: int = 70
+    fit_threshold: int = 50
     monthly_spend_cap_usd: float = 40
+    tailor_daily_cap: int = 20
     experience_max_years: int = 2
     full_time_only: bool = True
     exclude_clearance: bool = True

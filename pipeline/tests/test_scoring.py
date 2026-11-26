@@ -6,12 +6,12 @@ from typing import Any
 import pytest
 
 from jobsearch.llm import AuthExpiredError, ClaudeCode, LLMError, LLMResponse
-from jobsearch.models import Settings
+from jobsearch.models import JobForScoring, Settings
 from jobsearch.profile import load_profile
-from jobsearch.scoring import JobForScoring, ScoreItem, batch_prompt, score_batch, system_prompt, to_score_row
+from jobsearch.scoring import ScoreItem, batch_prompt, score_batch, system_prompt, to_score_row
 
 PROFILE = load_profile(Path(__file__).parent / "fixtures" / "profile_example.yaml")
-SETTINGS = Settings(fit_threshold=70)
+SETTINGS = Settings(fit_threshold=70)  # explicit, so the tests don't depend on the default
 
 
 def job(i: int, **kw: Any) -> JobForScoring:

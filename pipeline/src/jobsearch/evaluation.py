@@ -23,11 +23,11 @@ import yaml
 from pydantic import BaseModel, field_validator
 
 from .config import REPO_DIR
-from .scoring import JobForScoring
+from .models import JobForScoring
 
 Label = Literal["yes", "maybe", "no"]
 LABELS_FILE = REPO_DIR / "private" / "eval" / "scoring_labels.yaml"
-THRESHOLDS = list(range(50, 90, 5))
+THRESHOLDS = list(range(30, 90, 5))
 
 HEADER = """\
 # Fit-scoring evaluation set — label each job, then run: uv run jobsearch eval report

@@ -3,7 +3,10 @@
 Commands:
   jobsearch daily [--dry-run] [--where cloud|local] fetch job boards, filter, and save
   jobsearch score [--dry-run] [--limit N]          AI fit scores for jobs waiting to be scored
-  jobsearch local-daily                            the Mac's daily job: Workday boards, then scoring
+  jobsearch tailor [--job ID] [--limit N]           tailored resume + cover letter (best matches first)
+  jobsearch render --job ID                        rebuild a job's PDFs after you approve suggestions
+  jobsearch tasks                                  handle button presses from the website
+  jobsearch local-daily                            the Mac's daily job: Workday, scoring, tasks, tailoring
   jobsearch eval export | report                   evaluation set for the fit scores
   jobsearch schedule install|run-now|status|uninstall   the Mac's daily LaunchAgent
   jobsearch owner create --email you@example.com   register the one account allowed to sign in
@@ -30,6 +33,7 @@ from .llm import AuthExpiredError
 from .profile import Profile, load_profile, profile_from_data
 
 if TYPE_CHECKING:
+    from .documents import TailoringSummary
     from .scoring import ScoringSummary
 
 DEFAULT_PROFILE = REPO_DIR / "private" / "profile.yaml"
@@ -166,6 +170,13 @@ def _cmd_local_daily(args: argparse.Namespace) -> int:
         print(f"  ! {err}", file=sys.stderr)
     s = run_scoring(model=args.model)
     _print_scoring(s)
+    from . import db
+    from .documents import process_tasks, run_tailoring
+
+    for line in process_tasks():
+        print(f"task: {line}")
+    t = run_tailoring(limit=db.load_settings().tailor_daily_cap)
+    _print_tailoring(t)
     return 1 if (c["boards_ok"] == 0 and feed.errors) or (s.failed and not s.scored) else 0
 
 
@@ -252,6 +263,59 @@ def _cmd_schedule(args: argparse.Namespace) -> int:
     return 0
 
 
+def _print_tailoring(s: TailoringSummary) -> None:
+    if s.skipped_reason:
+        print(f"Tailoring skipped: {s.skipped_reason}")
+        return
+    print(
+        f"Tailored {s.tailored}: {s.rendered} ready, {s.waiting_for_approval} waiting for your approval, "
+        f"{s.failed} failed (estimated API value ${s.cost_usd:.2f}; free on your Claude plan)"
+    )
+    for err in s.errors:
+        print(f"  ! {err}", file=sys.stderr)
+
+
+def _cmd_tailor(args: argparse.Namespace) -> int:
+    from . import db
+    from .documents import run_tailoring, tailor_job
+
+    if args.job:
+        row = db.latest_profile()
+        if row is None:
+            print("No master profile uploaded yet.")
+            return 1
+        job = db.jobs_by_ids([args.job])[0]
+        res = tailor_job(job, Profile.model_validate(row.data))
+        state = "rendered" if res.rendered else f"{res.suggestions} suggestions waiting for your approval"
+        print(f"Tailored {job.title} — {job.company}: {state}")
+        return 0
+    limit = args.limit if args.limit is not None else db.load_settings().tailor_daily_cap
+    s = run_tailoring(limit=limit, dry_run=args.dry_run)
+    _print_tailoring(s)
+    return 1 if s.failed and not s.tailored else 0
+
+
+def _cmd_render(args: argparse.Namespace) -> int:
+    from . import db
+    from .documents import render_job
+
+    row = db.latest_profile()
+    if row is None:
+        print("No master profile uploaded yet.")
+        return 1
+    render_job(args.job, Profile.model_validate(row.data))
+    print("Rendered.")
+    return 0
+
+
+def _cmd_tasks(_args: argparse.Namespace) -> int:
+    from .documents import process_tasks
+
+    for line in process_tasks():
+        print(line)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="jobsearch", description="Job search assistant pipeline")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -278,6 +342,19 @@ def build_parser() -> argparse.ArgumentParser:
     local = sub.add_parser("local-daily", help="the Mac's daily job: Workday boards, then scoring")
     local.add_argument("--model", default="sonnet", help="Claude model alias for scoring")
     local.set_defaults(func=_cmd_local_daily)
+
+    tl = sub.add_parser("tailor", help="tailored resume + cover letter for matches (best first)")
+    tl.add_argument("--job", help="tailor just this job id")
+    tl.add_argument("--limit", type=int, help="how many jobs (default: the daily cap in Settings)")
+    tl.add_argument("--dry-run", action="store_true", help="show how many jobs would be tailored")
+    tl.set_defaults(func=_cmd_tailor)
+
+    rn = sub.add_parser("render", help="rebuild a job's PDFs after approving its suggestions")
+    rn.add_argument("--job", required=True)
+    rn.set_defaults(func=_cmd_render)
+
+    tk = sub.add_parser("tasks", help="handle button presses from the website")
+    tk.set_defaults(func=_cmd_tasks)
 
     sch = sub.add_parser("schedule", help="the Mac's daily LaunchAgent")
     sch.add_argument("action", choices=["install", "run-now", "status", "uninstall"])

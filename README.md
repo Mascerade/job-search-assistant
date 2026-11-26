@@ -3,37 +3,43 @@
 A private, single-user tool that finds Boston-area jobs every day, writes a tailored resume and
 cover letter for each match, and tracks every application from "found" to "offer".
 
-> Status: **Milestone 2 of 5** — the tracker website, login, master profile, and the daily job feed
-> (72 employer boards) work. AI scoring and document tailoring arrive in milestones 3–4.
+> Status: **Milestone 4 of 6.** Daily job feed (72 boards), AI fit scoring, and tailored resumes +
+> cover letters with an approval flow all work. Next: morning digest email (5), apply assist (6).
 
 ## How it fits together
 
 ```
- GitHub Actions (daily cron, Python)          Supabase (free tier)              Vercel (free)
- ┌──────────────────────────────┐   writes    ┌──────────────────────┐  reads   ┌───────────────────┐
- │ fetch jobs → filter → score  │ ──────────► │ Postgres + Auth +     │ ◄──────► │ React website     │
- │ → tailor → render PDF/DOCX   │             │ Storage (row-level    │  writes  │ (tracker, review, │
- │ → email digest               │ ◄────────── │ security: owner only) │          │  approvals)       │
- └──────────────────────────────┘  tasks      └──────────────────────┘          └───────────────────┘
+  GitHub Actions (cloud, ~5:15am)          Supabase (free tier)                 Vercel (free)
+  ┌───────────────────────────┐  writes   ┌─────────────────────────┐  reads   ┌──────────────────┐
+  │ fetch 52 boards → filter  │ ────────► │ Postgres + Auth +        │ ◄──────► │ React website    │
+  └───────────────────────────┘           │ Storage (owner-only RLS) │  writes  │ tracker, review, │
+  Kojo's Mac (LaunchAgents)               │                          │ (tasks)  │ downloads        │
+  ┌───────────────────────────┐  reads/   │                          │          └──────────────────┘
+  │ 7:30am: Workday boards →  │  writes   │                          │
+  │ score (Sonnet) → tailor   │ ◄───────► │                          │
+  │ (Opus) → check → PDFs     │           └─────────────────────────┘
+  │ every 10 min: button tasks│  AI = local Claude Code (`claude -p`) on Kojo's Claude plan
+  └───────────────────────────┘
 ```
 
-- **`pipeline/`** — Python. Everything that runs unattended: job sources, filters, Claude calls,
-  document rendering. Uses the Supabase *secret* key (never shipped to the browser).
+- **`pipeline/`** — Python. Job sources, filters, AI scoring and tailoring (through the local
+  Claude Code CLI), fact checks, Word/PDF rendering (LibreOffice), uploads. Uses the Supabase
+  *secret* key, which never reaches the browser.
 - **`web/`** — React + TypeScript + Vite + Tailwind + shadcn/ui. Talks to Supabase directly with
-  the *publishable* key; row-level security makes every table readable only by the owner account.
-- **`supabase/`** — the database schema (`migrations/`) and its security tests (`tests/`).
-- **`design-system/`** — the UI/UX Pro Max design system the website is built against
-  (see the "Project Adaptations" section of `MASTER.md`).
-- **`private/`** and **`resumes/`** — personal data. **Gitignored**; never committed.
+  the *publishable* key; row-level security limits every table to the owner account.
+- **`supabase/`** — schema (`migrations/`) and pgTAP security tests (`tests/`).
+- **`design-system/`** — the UI/UX Pro Max design system the website follows.
+- **`private/`** and **`resumes/`** — personal data (master profile, eval labels). **Gitignored.**
 
 ### Key ideas
 
-- **One owner.** Sign-ups are disabled. `jobsearch owner create` registers the single account
-  allowed in; every table's security policy checks `is_owner()`.
-- **Master profile = the only source of facts.** Every fact has an id. Tailored resume bullets must
-  cite fact ids; anything else becomes a *suggestion* that needs approval before a final PDF.
-- **Status history is automatic.** A database trigger records every status change, and the browser
-  can't write history (or rewrite a suggestion's text) directly.
+- **One owner.** Sign-ups are disabled; every table's policy checks `is_owner()`.
+- **Master profile = the only source of facts.** Tailored bullets cite fact ids. Code checks
+  (fact ids, numbers, skills, placeholders) and a second model pass turn anything unsupported
+  into a *suggestion* you approve, edit, or reject before the PDFs are built.
+- **Workday runs on the Mac.** Workday rate-limits cloud servers, so `daily.yml` uses
+  `--where cloud` and the Mac's `jobsearch local-daily` fetches Workday boards.
+- **Status history is automatic.** A trigger records every status change.
 
 ## Run it locally
 
@@ -100,6 +106,17 @@ description (5+ years required, security clearance) are dropped with a reason yo
    in the browser; never the secret one). `web/vercel.json` handles page routing.
 5. Run the feed once by hand: `gh workflow run daily.yml`, then open the site.
 
+## The Mac's jobs
+
+```bash
+cd pipeline
+uv run jobsearch schedule install      # daily 7:30am job + a 10-minute task checker (LaunchAgents)
+uv run jobsearch schedule status       # loaded? last exit code? recent log lines
+uv run jobsearch local-daily           # what the daily job runs: Workday → score → tasks → tailor (20/day)
+uv run jobsearch tailor --job <id>     # tailor one job now
+uv run jobsearch eval report           # compare AI scores with your labels (private/eval/)
+```
+
 ## Tests
 
 ```bash
@@ -114,7 +131,7 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 
 1. ✅ Tracker + profile: schema, login, board, job detail, manual add, profile, settings
 2. ✅ Daily job feed: 9 careers platforms, 72 boards, filters, `daily.yml` cron
-3. AI scoring with Claude Haiku 5.5, spend cap, labeled eval set
-4. Tailoring with Claude Opus 5.5, fact verification, DOCX/PDF rendering, approvals
+3. ✅ AI fit scoring with Claude Sonnet via local Claude Code; threshold 50 from a labeled eval set
+4. ✅ Tailored resume + cover letter with Claude Opus; fact checks; suggestions to approve/edit; Word + PDF
 5. Morning digest email, job-board APIs, HigherEdJobs, cleanup
 6. Apply assist (optional): Claude fills application forms in your browser and stops before Submit for your review

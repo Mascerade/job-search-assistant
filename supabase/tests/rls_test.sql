@@ -73,9 +73,9 @@ select lives_ok(
   'owner can request a task'
 );
 
-select is(
+select isnt(
   (select (data ->> 'fit_threshold')::int from public.settings where id = 1),
-  70, 'owner can read default settings'
+  null, 'owner can read settings'
 );
 
 -- ===== As a different signed-in user =====

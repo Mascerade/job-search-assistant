@@ -17,6 +17,7 @@ import {
 import { useId, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
+import { DocumentsTab } from '@/components/DocumentsTab'
 import { EmptyState } from '@/components/EmptyState'
 import { FitScore } from '@/components/FitScore'
 import { JobForm } from '@/components/JobForm'
@@ -423,10 +424,7 @@ export function JobDetailPage() {
         </TabsContent>
 
         <TabsContent value="documents">
-          <EmptyState icon={FileText} title="No documents yet">
-            Tailored resumes and cover letters will appear here, with any AI suggestions waiting for your approval.
-            This arrives in milestone 4.
-          </EmptyState>
+          <DocumentsTab job={job} />
         </TabsContent>
 
         <TabsContent value="notes" className="flex flex-col gap-6">

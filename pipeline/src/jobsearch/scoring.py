@@ -21,24 +21,11 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, ValidationError
 
 from .llm import AuthExpiredError, ClaudeCode, LLMError, LLMResponse
-from .models import Settings, Track
+from .models import JobForScoring, Settings, Track
 from .profile import Profile
 
 BATCH_SIZE = 10
 DESCRIPTION_CHARS = 3500
-
-
-class JobForScoring(BaseModel):
-    id: str
-    company: str
-    title: str
-    location: str | None = None
-    remote_type: str | None = None
-    employment_type: str | None = None
-    salary_min: int | None = None
-    salary_max: int | None = None
-    track: Track | None = None
-    description: str | None = None
 
 
 class ScoreItem(BaseModel):
@@ -295,7 +282,8 @@ def run_scoring(
                 batch = pending[i : i + BATCH_SIZE]
                 try:
                     items, resp = score_batch(engine, batch, profile, settings)
-                except AuthExpiredError:
+                except AuthExpiredError as e:
+                    summary.errors.append(f"Claude Code sign-in expired: {e}"[:300])
                     raise
                 except LLMError as e:
                     summary.errors.append(str(e)[:300])
