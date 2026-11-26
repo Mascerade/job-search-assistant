@@ -11,19 +11,21 @@
 #   descriptions), HigherEdJobs (blocks automated access), Handshake (needs your login).
 
 smartrecruiters:
-  - {company: Harvard University, token: HarvardUniversity, kind: university}
+  - {company: Harvard University, token: HarvardUniversity, kind: university,
+     aliases: [Harvard, President and Fellows of Harvard College]}
 
 peopleclick:
-  - {company: MIT, token: client_mit, kind: university}
+  - {company: MIT, token: client_mit, kind: university, aliases: [Massachusetts Institute of Technology]}
 
 silkroad:
   - {company: Boston University, token: BU, feed_url: "https://jobs.silkroad.com/BU/External/rss", kind: university}
 
 jibe:
-  - {company: Tufts University, token: jobs.tufts.edu, kind: university}
+  - {company: Tufts University, token: jobs.tufts.edu, kind: university, aliases: [Tufts]}
 
 pageup:
-  - {company: UMass Boston, token: umb, feed_url: "https://careers.pageuppeople.com/822/boston/en-us/rss/", kind: university}
+  - {company: UMass Boston, token: umb, feed_url: "https://careers.pageuppeople.com/822/boston/en-us/rss/", kind: university,
+     aliases: [University of Massachusetts Boston]}
 
 workday:
   # Universities
@@ -45,12 +47,14 @@ workday:
     wd: 1
     site: MGBExternal
     kind: hospital
+    aliases: [Massachusetts General Hospital, Mass General Hospital, Brigham and Women's Hospital, McLean Hospital]
     search_terms: [coordinator, program, administrator, analyst, software, developer, data, technology, engineer]
   - company: Beth Israel Lahey Health
     token: bilh
     wd: 1
     site: External
     kind: hospital
+    aliases: [Beth Israel Deaconess Medical Center, Lahey Hospital & Medical Center]
     search_terms: [coordinator, program, administrator, analyst, software, developer, data, technology, engineer]
   - {company: Dana-Farber Cancer Institute, token: danafarber, wd: 5, site: dana-farber, kind: hospital}
   - {company: Boston Medical Center, token: bmc, wd: 1, site: BMC, kind: hospital}
@@ -115,3 +119,29 @@ ashby:
   - {company: Asimov, token: asimov}
   - {company: Wistia, token: wistia}
   - {company: OpenEvidence, token: openevidence}
+
+# Job-board aggregator: catches employers not listed above. Needs ADZUNA_APP_ID and
+# ADZUNA_APP_KEY (free at developer.adzuna.com). Searches job titles near `token`, last 14
+# days. Results from employers listed above are skipped (their own sites are complete), and
+# descriptions are short snippets, so these jobs carry a "Short description" tag.
+adzuna:
+  - company: Adzuna
+    token: Boston
+    search_terms:
+      - software engineer
+      - software developer
+      - web developer
+      - machine learning
+      - AI engineer
+      - data analyst
+      - data scientist
+      - data engineer
+      - program coordinator
+      - program administrator
+      - program manager
+      - program assistant
+      - program associate
+      - project coordinator
+      - administrative coordinator
+      - systems analyst
+      - educational technology

@@ -1,6 +1,7 @@
 """Source adapters: one function per applicant-tracking system.
 
-Each `fetch_*` returns every open posting on a board as `Posting`s. Workday and
+Each `fetch_*` returns every open posting on a board as `Posting`s (Adzuna, an
+aggregator, returns recent search results instead). Workday and
 SmartRecruiters list endpoints have no descriptions, so those postings come back with
 `needs_detail=True` and `enrich()` fetches the detail page — only for the few that
 pass the title and location filters.
@@ -8,6 +9,7 @@ pass the title and location filters.
 
 from __future__ import annotations
 
+import os
 import re
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
@@ -15,9 +17,12 @@ from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
 from typing import Any
 
+import httpx
+
+from .config import ConfigError
 from .filters import normalize_employment, salary_from_text
 from .http import Http
-from .models import Board, Posting, RemoteType
+from .models import Board, EmploymentType, Posting, RemoteType
 from .text import html_to_text
 
 JsonObject = dict[str, Any]  # a decoded JSON object from an API response
@@ -508,6 +513,111 @@ def _parse_peopleclick_date(raw: str | None) -> datetime | None:
 
 
 # ---------------------------------------------------------------------------
+# Adzuna — https://developer.adzuna.com/docs/search (a job-board aggregator)
+#
+# One "board" is a set of title searches around one place (Board.token, e.g. "Boston").
+# Two differences from employer sites, handled in daily.py:
+#   - Adzuna returns only a snippet of each description (jobs get a "short-description" tag).
+#   - The results are a recent-postings window, not a full list, so a job missing from
+#     today's results is NOT marked closed.
+# The API keys travel in the URL, so errors are re-raised without it.
+# ---------------------------------------------------------------------------
+
+ADZUNA_SEARCH = "https://api.adzuna.com/v1/api/jobs/us/search/{page}"
+ADZUNA_PAGE = 50
+ADZUNA_MAX_PAGES = 2  # per search term
+ADZUNA_MAX_DAYS_OLD = 14
+ADZUNA_DISTANCE = 25  # around Board.token; the town filter does the precise cut
+
+_ADZUNA_EMPLOYMENT: dict[str, EmploymentType] = {
+    "full_time": "full_time",
+    "part_time": "part_time",
+    "contract": "contract",
+}
+
+
+class AdzunaError(RuntimeError):
+    """An Adzuna request failed (message never includes the URL, which holds the keys)."""
+
+
+def adzuna_keys() -> tuple[str, str]:
+    app_id = os.environ.get("ADZUNA_APP_ID", "").strip()
+    app_key = os.environ.get("ADZUNA_APP_KEY", "").strip()
+    if not app_id or not app_key:
+        raise ConfigError(
+            "ADZUNA_APP_ID / ADZUNA_APP_KEY aren't set (pipeline/.env.production and GitHub secrets)."
+        )
+    return app_id, app_key
+
+
+def _one_line(raw: str | None) -> str:
+    return " ".join((html_to_text(raw) or "").split())
+
+
+def _whole_dollars(value: Any) -> int | None:
+    return int(value) if isinstance(value, int | float) and value > 0 else None
+
+
+def _adzuna_posting(board: Board, r: JsonObject) -> Posting | None:
+    title = _one_line(r.get("title"))
+    company = _one_line((r.get("company") or {}).get("display_name"))
+    native_id = str(r.get("id") or "")
+    if not (title and company and native_id):
+        return None
+    loc = r.get("location") or {}
+    place = _one_line(loc.get("display_name"))
+    area = [a for a in loc.get("area") or [] if isinstance(a, str)]
+    if len(area) >= 2 and area[1] not in place:  # "Cambridge, Middlesex County" + ", Massachusetts"
+        place = f"{place}, {area[1]}" if place else area[1]
+    predicted = str(r.get("salary_is_predicted") or "0") == "1"  # Adzuna's own estimate: ignore
+    return Posting(
+        source="adzuna",
+        board=board.key,
+        native_id=native_id,
+        company=company,
+        title=title,
+        url=r.get("redirect_url"),
+        locations=[place] if place else [],
+        remote_type=_remote(title),
+        employment_type=_ADZUNA_EMPLOYMENT.get(r.get("contract_time") or "")
+        or _ADZUNA_EMPLOYMENT.get(r.get("contract_type") or ""),
+        description=html_to_text(r.get("description")),
+        salary_min=None if predicted else _whole_dollars(r.get("salary_min")),
+        salary_max=None if predicted else _whole_dollars(r.get("salary_max")),
+        posted_at=_parse_dt(r.get("created")),
+    )
+
+
+def fetch_adzuna(board: Board, http: Http) -> list[Posting]:
+    app_id, app_key = adzuna_keys()
+    found: dict[str, Posting] = {}
+    for term in board.search_terms:
+        for page in range(1, ADZUNA_MAX_PAGES + 1):
+            params: dict[str, str | int] = {
+                "app_id": app_id,
+                "app_key": app_key,
+                "results_per_page": ADZUNA_PAGE,
+                "title_only": term,
+                "where": board.token,
+                "distance": ADZUNA_DISTANCE,
+                "max_days_old": ADZUNA_MAX_DAYS_OLD,
+                "sort_by": "date",
+            }
+            try:
+                data = http.get_json(ADZUNA_SEARCH.format(page=page), params=params)
+            except httpx.HTTPStatusError as e:
+                raise AdzunaError(f"HTTP {e.response.status_code} searching '{term}'") from None
+            results = data.get("results") or []
+            for r in results:
+                p = _adzuna_posting(board, r)
+                if p is not None:
+                    found.setdefault(p.native_id, p)
+            if len(results) < ADZUNA_PAGE:
+                break
+    return list(found.values())
+
+
+# ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
 
@@ -521,6 +631,7 @@ FETCHERS: dict[str, Callable[[Board, Http], list[Posting]]] = {
     "silkroad": fetch_silkroad,
     "pageup": fetch_pageup,
     "peopleclick": fetch_peopleclick,
+    "adzuna": fetch_adzuna,
 }
 
 ENRICHERS: dict[str, Callable[[Posting, Board, Http], Posting]] = {

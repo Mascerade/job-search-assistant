@@ -7,7 +7,8 @@ Commands:
   jobsearch render --job ID                        rebuild a job's PDFs after you approve suggestions
   jobsearch tasks                                  handle queued button presses from the website, once
   jobsearch listen                                 handle button presses the moment they happen (Realtime)
-  jobsearch local-daily                            the Mac's daily job: Workday, scoring, tasks, tailoring
+  jobsearch local-daily                            the Mac's daily job (Workday → score → tailor → digest)
+  jobsearch digest [--dry-run]                     the morning digest email
   jobsearch eval export | report                   evaluation set for the fit scores
   jobsearch schedule install|run-now|status|uninstall   the Mac's daily LaunchAgent
   jobsearch owner create --email you@example.com   register the one account allowed to sign in
@@ -178,6 +179,13 @@ def _cmd_local_daily(args: argparse.Namespace) -> int:
         print(f"task: {line}")
     t = run_tailoring(limit=db.load_settings().tailor_daily_cap)
     _print_tailoring(t)
+    from .digest import run_digest
+
+    try:
+        digest, outcome = run_digest()
+        print(f"Digest: {outcome} ({digest.subject()})")
+    except ConfigError as e:
+        print(f"Digest skipped: {e}", file=sys.stderr)
     return 1 if (c["boards_ok"] == 0 and feed.errors) or (s.failed and not s.scored) else 0
 
 
@@ -339,6 +347,33 @@ def _cmd_listen(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_digest(args: argparse.Namespace) -> int:
+    from .config import PIPELINE_DIR
+    from .digest import render_html, render_text, run_digest
+
+    d, outcome = run_digest(dry_run=args.dry_run)
+    if args.dry_run:
+        print(render_text(d))
+        preview = PIPELINE_DIR / "output" / "digest-preview.html"
+        preview.parent.mkdir(exist_ok=True)
+        preview.write_text(render_html(d))
+        print(f"Preview: {preview}")
+    print(f"Digest: {outcome} ({d.subject()})")
+    return 0
+
+
+def _cmd_cleanup(args: argparse.Namespace) -> int:
+    from .cleanup import describe, run_cleanup
+
+    p, counts = run_cleanup(dry_run=args.dry_run)
+    if args.dry_run or p.is_empty():
+        print("\n".join(describe(p)))
+        print("Dry run: nothing changed." if args.dry_run else "Nothing to clean up.")
+    else:
+        print("Cleanup: " + ", ".join(f"{k.replace('_', ' ')} {v}" for k, v in counts.items()))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="jobsearch", description="Job search assistant pipeline")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -383,6 +418,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     tk = sub.add_parser("tasks", help="handle queued button presses from the website, once")
     tk.set_defaults(func=_cmd_tasks)
+
+    dg = sub.add_parser("digest", help="the morning digest email")
+    dg.add_argument("--dry-run", action="store_true", help="print it and save a preview; send nothing")
+    dg.set_defaults(func=_cmd_digest)
+
+    cl = sub.add_parser("cleanup", help="delete old untouched jobs and finished jobs' files")
+    cl.add_argument("--dry-run", action="store_true", help="list what would be removed; change nothing")
+    cl.set_defaults(func=_cmd_cleanup)
 
     ls = sub.add_parser("listen", help="handle button presses the moment they happen (Supabase Realtime)")
     ls.add_argument("--max-seconds", type=float, help="stop after this long (for testing)")

@@ -3,21 +3,24 @@
 A private, single-user tool that finds Boston-area jobs every day, writes a tailored resume and
 cover letter for each match, and tracks every application from "found" to "offer".
 
-> Status: **Milestone 4 of 6.** Daily job feed (72 boards), AI fit scoring, and tailored resumes +
-> cover letters with an approval flow all work. Next: morning digest email (5), apply assist (6).
+> Status: **Milestone 5 of 6.** Daily job feed (72 employer boards + Adzuna), AI fit scoring,
+> tailored resumes + cover letters with an approval flow, and a morning digest email all work.
+> Next: apply assist (6).
 
 ## How it fits together
 
 ```
   GitHub Actions (cloud, ~5:15am)          Supabase (free tier)                 Vercel (free)
   ┌───────────────────────────┐  writes   ┌─────────────────────────┐  reads   ┌──────────────────┐
-  │ fetch 52 boards → filter  │ ────────► │ Postgres + Auth +        │ ◄──────► │ React website    │
-  └───────────────────────────┘           │ Storage (owner-only RLS) │  writes  │ tracker, review, │
-  Kojo's Mac (LaunchAgents)               │                          │ (tasks)  │ downloads        │
+  │ fetch boards + Adzuna →   │ ────────► │ Postgres + Auth +        │ ◄──────► │ React website    │
+  │ filter → cleanup          │           │ Storage (owner-only RLS) │  writes  │ tracker, review, │
+  └───────────────────────────┘           │                          │          │ downloads        │
+  Kojo's Mac (LaunchAgents)               │                          │ (tasks)  │                  │
   ┌───────────────────────────┐  reads/   │                          │          └──────────────────┘
   │ 7:30am: Workday boards →  │  writes   │                          │
   │ score (Sonnet) → tailor   │ ◄───────► │                          │
-  │ (Opus) → check → PDFs     │           └─────────────────────────┘
+  │ (Opus) → check → PDFs →   │           └─────────────────────────┘
+  │ digest email (Gmail)      │
   │ listener: button presses  │  AI = local Claude Code (`claude -p`) on Kojo's Claude plan
   │ via Realtime (websocket)  │
   └───────────────────────────┘
@@ -81,7 +84,21 @@ uv run jobsearch daily             # fetch, filter, save to Supabase, close post
 Filtering is cheap and deterministic (no AI): title must match a track's keywords and not be senior
 or part-time; location must be one of your towns, US-remote, or hybrid; obvious mismatches in the
 description (5+ years required, security clearance) are dropped with a reason you can see under
-"Show filtered out" on Today. Borderline cases are kept for the AI score in milestone 3.
+"Show filtered out" on Today. Borderline cases are kept for the AI score.
+
+**Adzuna** (a job-board aggregator, free key at developer.adzuna.com) catches employers that aren't
+in `sources.yaml`. It searches job titles around Boston from the last 14 days. Its copies of jobs
+from employers we already read directly are skipped (`aliases:` in `sources.yaml` covers other
+names, like "Massachusetts Institute of Technology" for MIT). Adzuna only shares a snippet of each
+description, so those jobs carry a "Short description" tag; open the link for the full posting.
+
+**Cleanup** runs after the feed (`uv run jobsearch cleanup --dry-run` shows what it would do):
+postings that closed 30+ days ago and Adzuna postings 45+ days old are deleted if you never
+touched them (status still New / Docs ready / Not interested, no notes or contacts; hand-added
+jobs are never deleted), and files for jobs rejected, withdrawn, or not interested for 60+ days
+are removed (the job and its history stay). This keeps Storage under the free 1 GB and the
+website under its 1,000-job load. The workflow also commits `.github/heartbeat` when the repo has
+had no commits for 50 days, because GitHub pauses schedules in quiet public repos after 60.
 
 ## Deploy (all free tiers)
 
@@ -100,7 +117,7 @@ description (5+ years required, security clearance) are dropped with a reason yo
    cd pipeline
    JOBSEARCH_ENV=production uv run jobsearch owner create --email you@example.com
    JOBSEARCH_ENV=production uv run jobsearch profile push --note "first version"
-   cd .. && scripts/set-github-secrets.sh    # copies the two values into GitHub Actions secrets
+   cd .. && scripts/set-github-secrets.sh    # copies the Supabase (and Adzuna) values into GitHub Actions secrets
    ```
 4. **Vercel** — import the GitHub repo, set **Root Directory** to `web`, and add the environment
    variables `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (the *publishable* key is safe
@@ -113,11 +130,22 @@ description (5+ years required, security clearance) are dropped with a reason yo
 cd pipeline
 uv run jobsearch schedule install      # daily 7:30am job + an always-on request listener (LaunchAgents)
 uv run jobsearch schedule status       # loaded? last exit code? recent log lines
-uv run jobsearch local-daily           # what the daily job runs: Workday → score → tasks → tailor (20/day)
+uv run jobsearch local-daily           # what the daily job runs: Workday → score → tasks → tailor (20/day) → digest
 uv run jobsearch tailor --job <id>     # tailor one job now
 uv run jobsearch listen                # handle website button presses as they happen (Supabase Realtime)
 uv run jobsearch eval report           # compare AI scores with your labels (private/eval/)
+uv run jobsearch digest --dry-run      # print the morning email and save output/digest-preview.html
 ```
+
+### Morning digest
+
+At the end of `local-daily`, the Mac emails you (from your Gmail, to your Gmail) what changed since
+the last digest: new matches, documents waiting for review, documents ready to download,
+applications in Applied for 14+ days, and problems (failed runs, boards that couldn't be fetched,
+an expiring Claude sign-in, the usage cap). No news means no email. Setup: turn on 2-Step
+Verification for the Google account, create an app password at myaccount.google.com/apppasswords,
+and add `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD` to `pipeline/.env.production` (optional:
+`DIGEST_TO` to send elsewhere, `SITE_URL` for the links).
 
 ## Tests
 
@@ -135,5 +163,6 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 2. ✅ Daily job feed: 9 careers platforms, 72 boards, filters, `daily.yml` cron
 3. ✅ AI fit scoring with Claude Sonnet via local Claude Code; threshold 50 from a labeled eval set
 4. ✅ Tailored resume + cover letter with Claude Opus; fact checks; suggestions to approve/edit; Word + PDF
-5. Morning digest email, job-board APIs, HigherEdJobs, cleanup
+5. ✅ Morning digest email (Gmail), Adzuna job-board search, cleanup, schedule heartbeat
+   (HigherEdJobs blocks automated access; add its jobs with "Add job")
 6. Apply assist (optional): Claude fills application forms in your browser and stops before Submit for your review

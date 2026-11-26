@@ -18,7 +18,8 @@ RETRY_STATUS = {429, 500, 502, 503, 504}
 # Minimum seconds between requests to each group of hosts. Every *.myworkdayjobs.com
 # site runs on shared Workday infrastructure that rate-limits cloud IPs (GitHub Actions
 # got 429s with parallel requests), so all Workday traffic takes turns.
-DEFAULT_THROTTLE: Mapping[str, float] = {"myworkdayjobs.com": 1.0}
+# Adzuna's free tier has per-minute limits (shown in your Adzuna account); stay well under.
+DEFAULT_THROTTLE: Mapping[str, float] = {"myworkdayjobs.com": 1.0, "api.adzuna.com": 2.5}
 
 
 class Http:

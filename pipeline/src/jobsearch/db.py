@@ -19,7 +19,7 @@ from supabase import Client, create_client
 from .config import load_config
 from .models import JobForScoring, JobRow, Settings
 
-RunKind = Literal["daily", "local", "scoring", "tailoring", "tasks", "on_demand"]
+RunKind = Literal["daily", "local", "scoring", "tailoring", "tasks", "digest", "cleanup", "on_demand"]
 RunStatus = Literal["running", "succeeded", "failed"]
 
 
@@ -397,3 +397,64 @@ def unreviewed_jobs() -> list[JobForScoring]:
         if all(d.decision == "pending" for d in decisions):
             out.append(job)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Digest (milestone 5)
+# ---------------------------------------------------------------------------
+
+
+class RunRow(BaseModel):
+    kind: str
+    status: str
+    started_at: datetime
+    error: str | None = None
+    counts: dict[str, Any] = {}
+
+
+def last_run_start(kind: RunKind) -> datetime | None:
+    """When the last *successful* run of this kind started."""
+    data = (
+        client()
+        .table("runs")
+        .select("started_at")
+        .eq("kind", kind)
+        .eq("status", "succeeded")
+        .order("started_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+    )
+    rows = TypeAdapter(list[dict[str, datetime]]).validate_python(data)
+    return rows[0]["started_at"] if rows else None
+
+
+def runs_since(since: datetime) -> list[RunRow]:
+    data = (
+        client()
+        .table("runs")
+        .select("kind, status, started_at, error, counts")
+        .gte("started_at", since.isoformat())
+        .neq("kind", "digest")
+        .order("started_at")
+        .execute()
+        .data
+    )
+    return _rows(data, RunRow)
+
+
+def latest_signin_days_left() -> int | None:
+    data = (
+        client()
+        .table("runs")
+        .select("kind, status, started_at, error, counts")
+        .eq("kind", "scoring")
+        .eq("status", "succeeded")
+        .order("started_at", desc=True)
+        .limit(1)
+        .execute()
+        .data
+    )
+    rows = _rows(data, RunRow)
+    days = rows[0].counts.get("signin_days_left") if rows else None
+    return int(days) if days is not None else None

@@ -296,8 +296,13 @@ def salary_from_text(text: str | None) -> tuple[int | None, int | None]:
     return None, None
 
 
+def company_key(name: str) -> str:
+    """'The Acme Corp.' and 'Acme, Inc' -> 'acme': the same employer, however it's written."""
+    company = re.sub(r"\b(inc|llc|corp|corporation|co|the)\b", "", _words(name)).strip()
+    return re.sub(r" +", " ", company)
+
+
 def dedupe_key(posting: Posting) -> str:
-    company = re.sub(r"\b(inc|llc|corp|corporation|co|the)\b", "", _words(posting.company)).strip()
     title = _words(re.split(r"\s[-–|(]\s?", posting.title)[0])  # drop " - Boston", " (Remote)"
     place = _words(posting.locations[0].split(",")[0]) if posting.locations else ""
-    return f"{re.sub(r' +', ' ', company)}|{title}|{place}"
+    return f"{company_key(posting.company)}|{title}|{place}"

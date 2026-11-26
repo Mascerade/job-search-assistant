@@ -1,0 +1,48 @@
+{
+  "__CLASS__": "Adzuna::API::Response::JobSearchResults",
+  "count": 3,
+  "mean": 85000,
+  "results": [
+    {
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "id": "4400000001",
+      "title": "Junior <strong>Software</strong> <strong>Engineer</strong>",
+      "description": "Join our small team building tools for clinics. You will write Python and React&hellip;",
+      "redirect_url": "https://www.adzuna.com/land/ad/4400000001?se=abc&v=def",
+      "created": "2026-11-24T15:02:11Z",
+      "company": {"__CLASS__": "Adzuna::API::Response::Company", "display_name": "Example Health Tech"},
+      "location": {"__CLASS__": "Adzuna::API::Response::Location", "display_name": "Cambridge, Middlesex County", "area": ["US", "Massachusetts", "Middlesex County", "Cambridge"]},
+      "category": {"__CLASS__": "Adzuna::API::Response::Category", "label": "IT Jobs", "tag": "it-jobs"},
+      "contract_time": "full_time",
+      "salary_min": 90000.0,
+      "salary_max": 110000.0,
+      "salary_is_predicted": "0",
+      "latitude": 42.37,
+      "longitude": -71.11
+    },
+    {
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "id": "4400000002",
+      "title": "Program Coordinator",
+      "description": "Coordinate events and grants for a Boston nonprofit...",
+      "redirect_url": "https://www.adzuna.com/land/ad/4400000002?se=abc&v=def",
+      "created": "2026-11-25T09:00:00Z",
+      "company": {"__CLASS__": "Adzuna::API::Response::Company", "display_name": "Massachusetts Institute of Technology"},
+      "location": {"__CLASS__": "Adzuna::API::Response::Location", "display_name": "Cambridge, Middlesex County", "area": ["US", "Massachusetts", "Middlesex County", "Cambridge"]},
+      "contract_type": "permanent",
+      "salary_min": 61000,
+      "salary_max": 61000,
+      "salary_is_predicted": "1"
+    },
+    {
+      "__CLASS__": "Adzuna::API::Response::Job",
+      "id": "4400000003",
+      "title": "Data Analyst",
+      "description": "No company on this one.",
+      "redirect_url": "https://www.adzuna.com/land/ad/4400000003",
+      "created": "2026-11-25T09:00:00Z",
+      "company": {"__CLASS__": "Adzuna::API::Response::Company"},
+      "location": {"__CLASS__": "Adzuna::API::Response::Location", "display_name": "Boston, Suffolk County", "area": ["US", "Massachusetts", "Suffolk County", "Boston"]}
+    }
+  ]
+}

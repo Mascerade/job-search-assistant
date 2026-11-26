@@ -14,6 +14,8 @@ export function needsReview(job: Job): boolean {
 export const TAG_LABEL: Record<string, string> = {
   'location-unclear': 'Location unclear',
   'immediate-start': 'Wants someone soon',
+  // Adzuna only shares a snippet of the posting; the full text is behind the job link.
+  'short-description': 'Short description',
 }
 
 const AGGREGATORS: Partial<Record<Job['source'], string>> = {

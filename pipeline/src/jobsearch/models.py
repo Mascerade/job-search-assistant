@@ -7,8 +7,19 @@ from typing import Literal, TypedDict
 
 from pydantic import BaseModel, Field
 
+# Employer career sites first, then job-board aggregators (listed last so, within a run,
+# an employer's own listing is stored before an aggregator's copy of it).
 Ats = Literal[
-    "greenhouse", "lever", "ashby", "workday", "smartrecruiters", "jibe", "silkroad", "pageup", "peopleclick"
+    "greenhouse",
+    "lever",
+    "ashby",
+    "workday",
+    "smartrecruiters",
+    "jibe",
+    "silkroad",
+    "pageup",
+    "peopleclick",
+    "adzuna",
 ]
 Track = Literal["software", "program_admin", "hybrid"]
 RemoteType = Literal["onsite", "hybrid", "remote"]
@@ -22,12 +33,16 @@ class Board(BaseModel):
     ats: Ats
     company: str
     # greenhouse board token / lever company / ashby org / workday tenant / smartrecruiters
-    # company id / jibe host / silkroad or pageup short name / peopleclick client code
+    # company id / jibe host / silkroad or pageup short name / peopleclick client code /
+    # adzuna place to search around
     token: str
     wd: int | None = None  # workday host number (wd1, wd5, ...)
     site: str | None = None  # workday site name
     feed_url: str | None = None  # RSS feeds (silkroad, pageup)
-    search_terms: list[str] = Field(default_factory=list)  # workday: search instead of listing everything
+    search_terms: list[str] = Field(default_factory=list)  # workday, adzuna: search instead of listing all
+    # Other names the employer goes by on job boards ("Massachusetts Institute of Technology"
+    # for MIT), so aggregator copies of its jobs are recognized and skipped.
+    aliases: list[str] = Field(default_factory=list)
     kind: Literal["tech", "university", "hospital", "research", "nonprofit"] = "tech"
 
     @property

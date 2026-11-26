@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Literal, get_args
 import yaml
 
 from .config import REPO_DIR
-from .filters import Verdict, dedupe_key, detail_verdict, location_verdict, title_verdict
+from .filters import Verdict, company_key, dedupe_key, detail_verdict, location_verdict, title_verdict
 from .http import Http
 from .models import Ats, Board, JobRow, Posting, Settings
 from .sources import enrich, fetch
@@ -32,10 +32,20 @@ Where = Literal["all", "cloud", "local"]
 # Workday answers cloud servers (GitHub Actions) with persistent 429s but works fine from
 # a home connection, so those boards are fetched by the daily job on Kojo's Mac.
 LOCAL_ONLY_ATS: frozenset[Ats] = frozenset({"workday"})
+# Job-board aggregators: their results are a recent-postings window with short description
+# snippets, and they repeat jobs from employers whose own sites we already read.
+AGGREGATOR_ATS: frozenset[Ats] = frozenset({"adzuna"})
 
 
 def runs_where(board: Board) -> Literal["cloud", "local"]:
     return "local" if board.ats in LOCAL_ONLY_ATS else "cloud"
+
+
+def direct_companies(boards: list[Board]) -> frozenset[str]:
+    """Employers whose own job sites we read; aggregator copies of their jobs are skipped."""
+    return frozenset(
+        company_key(name) for b in boards if b.ats not in AGGREGATOR_ATS for name in [b.company, *b.aliases]
+    )
 
 
 def load_boards(path: Path = SOURCES_FILE) -> list[Board]:
@@ -56,8 +66,13 @@ class BoardResult:
     error: str | None = None
 
 
-def process_board(board: Board, settings: Settings, http: Http) -> BoardResult:
-    """Fetch one board and run the filters. Never raises; errors are recorded."""
+def process_board(
+    board: Board, settings: Settings, http: Http, covered: frozenset[str] = frozenset()
+) -> BoardResult:
+    """Fetch one board and run the filters. Never raises; errors are recorded.
+
+    `covered` (see direct_companies) only applies to aggregator boards.
+    """
     result = BoardResult(board)
     try:
         listings = fetch(board, http)
@@ -68,6 +83,9 @@ def process_board(board: Board, settings: Settings, http: Http) -> BoardResult:
     result.seen_ids = [p.source_job_id for p in listings]
     result.counts["fetched"] = len(listings)
     for p in listings:
+        if board.ats in AGGREGATOR_ATS and company_key(p.company) in covered:
+            result.counts["covered_by_employer_site"] += 1
+            continue
         tv = title_verdict(p.title, settings)
         if tv.track is None:
             continue  # not a role we track; not counted as "filtered"
@@ -121,7 +139,7 @@ def to_row(p: Posting, v: Verdict) -> JobRow:
         "posted_at": p.posted_at.isoformat() if p.posted_at else None,
         "dedupe_key": dedupe_key(p),
         "track": v.track,
-        "tags": v.tags,
+        "tags": [*v.tags, "short-description"] if p.source in AGGREGATOR_ATS else v.tags,
         "pipeline_state": "new" if v.keep else "filtered_out",
         "filter_reason": v.reason,
     }
@@ -146,6 +164,7 @@ def run_daily(
 
     settings = db.load_settings()
     boards = load_boards()
+    covered = direct_companies(boards)  # from every board, before narrowing to this run's
     if only:
         boards = [b for b in boards if b.key in only or b.token in only or b.company in only]
     if where != "all":
@@ -157,7 +176,7 @@ def run_daily(
     kept: list[tuple[Posting, Verdict]] = []
     try:
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            results = list(pool.map(lambda b: process_board(b, settings, http), boards))
+            results = list(pool.map(lambda b: process_board(b, settings, http, covered), boards))
 
         rows: list[JobRow] = []
         for r in results:
@@ -173,7 +192,8 @@ def run_daily(
         if run_id is not None:
             counts.update(db.ingest(rows).model_dump())
             for r in results:
-                if not r.error:  # only close postings after a complete, successful fetch
+                # Only close postings after a complete, successful fetch of a full list.
+                if not r.error and r.board.ats not in AGGREGATOR_ATS:
                     counts["closed"] += db.close_missing(r.board.key, r.seen_ids)
             status: RunStatus = "failed" if boards and counts["boards_ok"] == 0 else "succeeded"
             db.finish_run(run_id, status=status, counts=dict(counts), error="\n".join(errors) or None)
