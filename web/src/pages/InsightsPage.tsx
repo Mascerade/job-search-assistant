@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import {
   agencyShare,
   bySource,
+  byStart,
   byTrack,
   byWorkSetup,
   fitBins,
@@ -30,9 +31,11 @@ import {
   useInsightJobs,
   type Part,
   type RangeKey,
+  type StartBreakdown,
 } from '@/lib/insights'
 import { useSettings } from '@/lib/queries'
 import { TRACK_LABEL, TRACK_SWATCH } from '@/lib/status'
+import { formatDay, useAvailableFrom } from '@/lib/timing'
 import type { JobTrack } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -118,12 +121,13 @@ function RankedBars({
   parts,
   colorOf,
   labelWidth = 'w-32 sm:w-36',
-  unit = 'matches',
+  unit = ['match', 'matches'],
 }: {
   parts: (Part & { note?: string })[]
   colorOf: (p: Part) => string
   labelWidth?: string
-  unit?: string
+  /** Singular and plural, for the tooltip ("1 match", "3 matches"). */
+  unit?: [string, string]
 }) {
   const max = Math.max(1, ...parts.map((p) => p.count))
   if (!parts.length) return <p className="text-sm text-muted-foreground">No matches in this range yet.</p>
@@ -136,7 +140,7 @@ function RankedBars({
             {p.note && <span className="text-muted-foreground"> {p.note}</span>}
           </span>
           <span className="h-5 min-w-0 flex-1">
-            <Tip label={`${p.label}: ${p.count} ${unit}`} content={`${p.count} ${unit} · ${p.label}`}>
+            <Tip label={`${p.label}: ${p.count} ${unit[p.count === 1 ? 0 : 1]}`} content={`${p.count} ${unit[p.count === 1 ? 0 : 1]} · ${p.label}`}>
               <span
                 className={cn('block h-5 rounded-r-sm transition-opacity hover:opacity-85', colorOf(p))}
                 style={{ width: `${Math.max((p.count / max) * 100, p.count ? 1.5 : 0)}%` }}
@@ -232,6 +236,34 @@ function WorkSetup({ parts }: { parts: Part[] }) {
           </li>
         ))}
       </ul>
+    </div>
+  )
+}
+
+/**
+ * When matches start, in a fixed order (best timing first). Emphasis form, like the funnel:
+ * "After graduation" (the jobs whose timing fits) in the strong blue, the rest in the soft blue.
+ */
+function StartChart({ data, availableFrom }: { data: StartBreakdown; availableFrom: string }) {
+  if (!data.total) return <p className="text-sm text-muted-foreground">No matches in this range yet.</p>
+  const after = data.parts.find((p) => p.key === 'after')?.count ?? 0
+  const colorOf = (p: Part) => (p.key === 'after' ? 'bg-chart-1' : p.key === 'unknown' ? 'bg-chart-muted' : 'bg-chart-soft')
+  return (
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-8">
+      <div className="flex flex-col gap-1">
+        <span className="text-lg font-semibold">
+          {after} of {data.total}
+        </span>
+        <span className="text-xs text-muted-foreground">
+          matches name a start on or after {formatDay(availableFrom)}, when you're available.
+        </span>
+        <span className="mt-2 text-xs text-muted-foreground">
+          {data.terms
+            ? `${data.terms} ${data.terms === 1 ? 'is a fixed-term job' : 'are fixed-term jobs'} with an end date; ${data.termsSoon} ${data.termsSoon === 1 ? 'ends' : 'end'} within 3 months of your start.`
+            : 'No fixed-term jobs with an end date in this range.'}
+        </span>
+      </div>
+      <RankedBars parts={data.parts} colorOf={colorOf} labelWidth="w-36 sm:w-40" />
     </div>
   )
 }
@@ -409,6 +441,7 @@ export function InsightsPage() {
   const { data: allJobs, isLoading, isFetching, error } = useInsightJobs()
   const { data: settings } = useSettings()
   const threshold = settings?.fit_threshold ?? 50
+  const availableFrom = useAvailableFrom()
   const [range, setRange] = useState<RangeKey>('30')
   const rangeLabel = RANGES.find((r) => r.key === range)?.label.toLowerCase() ?? ''
 
@@ -424,11 +457,12 @@ export function InsightsPage() {
       sources: bySource(matches),
       setup: byWorkSetup(matches),
       agency: agencyShare(matches),
+      start: byStart(matches, availableFrom),
       time: matchesOverTime(matches, range),
       bins: fitBins(jobs),
       employers: topEmployers(matches),
     }
-  }, [allJobs, range, threshold])
+  }, [allJobs, range, threshold, availableFrom])
 
   const header = (
     <PageHeader
@@ -483,7 +517,7 @@ export function InsightsPage() {
     )
   }
 
-  const { head, stages, tracks, sources, setup, agency, time, bins, employers, jobs } = view
+  const { head, stages, tracks, sources, setup, agency, start, time, bins, employers, jobs } = view
   const trackColor = (p: Part) => TRACK_SWATCH[p.key as JobTrack] ?? 'bg-chart-muted'
 
   return (
@@ -541,6 +575,21 @@ export function InsightsPage() {
                   {agency.count} of {agency.total} matches. Their documents are written after direct employers’.
                 </span>
               </div>
+            </ChartCard>
+            <ChartCard
+              className="md:col-span-2"
+              title="When they start"
+              subtitle="Matches by the start date in the posting. Most don't say; those employers usually want someone within weeks."
+              table={{
+                columns: ['Start', 'Matches', 'Share'],
+                rows: [
+                  ...start.parts.map((p) => [p.label, p.count, pct(start.total ? p.count / start.total : null)]),
+                  ['Fixed-term, with an end date', start.terms, pct(start.total ? start.terms / start.total : null)],
+                  ['…ending within 3 months of your start', start.termsSoon, pct(start.total ? start.termsSoon / start.total : null)],
+                ],
+              }}
+            >
+              <StartChart data={start} availableFrom={availableFrom} />
             </ChartCard>
           </div>
         </section>

@@ -46,7 +46,8 @@ cover letter for each match, and tracks every application from "found" to "offer
   `--where cloud` and the Mac's `jobsearch local-daily` fetches Workday boards.
 - **Status history is automatic.** A trigger records every status change.
 - **Insights.** `/insights` charts the search: the funnel from found to offer, % applied, role
-  types, sources, work setup, staffing-agency share, matches per day, fit scores, top employers.
+  types, sources, work setup, staffing-agency share, when jobs start (against "Available from"),
+  matches per day, fit scores, top employers.
   Definitions live in `web/src/lib/insights.ts` (Today's headline numbers use the same ones).
 - **Timing focus.** Until a date in Settings (default March 1, 2027) the daily 20 documents go to
   software, then university tech, then program admin: admin roles usually hire weeks before the

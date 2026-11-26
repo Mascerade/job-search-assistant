@@ -331,3 +331,8 @@ Role type: gray tag + dot in the track's chart color.
 - Phone rows add one muted line ("Starts …" / "Term ends …") only when the posting says something,
   plus the same tags. Job detail has a **Start** property with the posting's words as a quote.
 - Logic lives in `web/src/lib/timing.ts` (mirrors `pipeline/src/jobsearch/timing.py`).
+- Insights has a full-width **When they start** card in "What kinds of jobs": ranked bars in a fixed
+  order (After graduation, Not stated, Immediately, Before graduation, plus Not checked yet only when
+  present). Emphasis form like the funnel: After graduation in chart-1, the rest chart-soft, "Not
+  checked yet" chart-muted. A text summary sits on the left (stacked on phones): "N of M" matches
+  plus fixed-term counts.

@@ -10,6 +10,7 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { keys } from './queries'
 import { supabase } from './supabase'
+import { startFit, termEndsSoon, type StartFit } from './timing'
 import type { ApplicationStatus, Job, JobTrack } from './types'
 
 export type InsightJob = Pick<
@@ -26,10 +27,16 @@ export type InsightJob = Pick<
   | 'company'
   | 'tags'
   | 'closed_at'
+  | 'start_kind'
+  | 'start_from'
+  | 'start_to'
+  | 'term_end'
+  | 'start_note'
 >
 
+// One string literal (not concatenated), so supabase-js can type the selected columns.
 const COLUMNS =
-  'id, track, source, status, pipeline_state, fit_score, first_seen_at, applied_at, remote_type, company, tags, closed_at'
+  'id, track, source, status, pipeline_state, fit_score, first_seen_at, applied_at, remote_type, company, tags, closed_at, start_kind, start_from, start_to, term_end, start_note'
 const PAGE = 1000
 
 /** Every job, light columns only (no descriptions), paged so it never stops at 1,000 rows. */
@@ -181,6 +188,35 @@ export function byWorkSetup(matches: InsightJob[]): Part[] {
 
 export function agencyShare(matches: InsightJob[]): { count: number; total: number } {
   return { count: matches.filter((j) => j.tags.includes(STAFFING_TAG)).length, total: matches.length }
+}
+
+export interface StartBreakdown {
+  parts: Part[]
+  total: number
+  /** Fixed-term jobs with an end date, and those ending within ~3 months of your start. */
+  terms: number
+  termsSoon: number
+}
+
+const START_GROUPS: [StartFit, string][] = [
+  ['after', 'After graduation'],
+  ['unstated', 'Not stated'],
+  ['asap', 'Immediately'],
+  ['before', 'Before graduation'],
+  ['unknown', 'Not checked yet'],
+]
+
+/** Matches by when the posting says the job starts, against Settings → Available from (lib/timing.ts). */
+export function byStart(matches: InsightJob[], availableFrom: string): StartBreakdown {
+  const counts = countBy(matches, (j) => startFit(j, availableFrom))
+  const parts = START_GROUPS.map(([key, label]) => ({ key, label, count: counts.find((c) => c.key === key)?.count ?? 0 }))
+  const terms = matches.filter((j) => j.term_end !== null)
+  return {
+    parts: parts.filter((p) => p.key !== 'unknown' || p.count > 0), // jobs scored before start dates were read
+    total: matches.length,
+    terms: terms.length,
+    termsSoon: terms.filter((j) => termEndsSoon(j, availableFrom)).length,
+  }
 }
 
 export interface Employer extends Part {
