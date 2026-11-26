@@ -176,3 +176,14 @@ def test_launch_agent_runs_local_daily_against_production() -> None:
     assert d["EnvironmentVariables"]["JOBSEARCH_ENV"] == "production"
     assert d["StartCalendarInterval"] == {"Hour": 7, "Minute": 30}
     assert "/Users/x/.local/bin" in d["EnvironmentVariables"]["PATH"]
+
+
+def test_snippet_skips_company_boilerplate() -> None:
+    from jobsearch.evaluation import snippet
+
+    desc = (
+        "At Acme we value everyone and believe in fairness. " * 4
+        + "What you'll do: build internal tools in Python."
+    )
+    assert snippet(desc).startswith("What you'll do: build internal tools")
+    assert snippet("Short role text.") == "Short role text."

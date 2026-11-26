@@ -12,6 +12,7 @@ and how much noise it would let through (precision), plus the disagreements.
 from __future__ import annotations
 
 import random
+import re
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -66,13 +67,29 @@ def sample(jobs: Sequence[JobForScoring], n: int, seed: int = 7) -> list[JobForS
     return picked[:n]
 
 
+_ROLE_MARKERS = re.compile(
+    r"(what you'?ll do|what you will do|responsibilities|the role|about the role|position summary|"
+    r"job summary|position description|job description|duties|overview of the position|you will)",
+    re.I,
+)
+
+
+def snippet(description: str | None, length: int = 400) -> str:
+    """The start of the *role* description, skipping company boilerplate when possible."""
+    text = " ".join((description or "").split())
+    m = _ROLE_MARKERS.search(text, 0, 4000)
+    start = m.start() if m and m.start() > 80 else 0
+    out = text[start : start + length]
+    return out + ("…" if len(text) > start + length else "")
+
+
 def to_items(jobs: Sequence[JobForScoring], urls: dict[str, str | None]) -> list[EvalItem]:
     items = []
     for j in jobs:
-        snippet = " ".join((j.description or "").split())[:400]
+        snippet_text = snippet(j.description)
         items.append(
             EvalItem(job_id=j.id, company=j.company, title=j.title, location=j.location,
-                     url=urls.get(j.id), snippet=snippet)
+                     url=urls.get(j.id), snippet=snippet_text)
         )  # fmt: skip
     return items
 
