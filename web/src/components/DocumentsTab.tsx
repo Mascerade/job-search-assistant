@@ -98,7 +98,7 @@ function TaskProgress({ task }: { task: TaskRow | null | undefined }) {
       </ol>
       {task.step === 'queued' && (
         <p className="mt-1 text-xs text-muted-foreground">
-          Your Mac picks this up within 10 minutes (it needs to be awake). Writing takes about a minute.
+          Your Mac picks this up right away if it's awake (otherwise as soon as it wakes). Writing takes about a minute.
         </p>
       )}
     </div>

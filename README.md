@@ -18,7 +18,8 @@ cover letter for each match, and tracks every application from "found" to "offer
   │ 7:30am: Workday boards →  │  writes   │                          │
   │ score (Sonnet) → tailor   │ ◄───────► │                          │
   │ (Opus) → check → PDFs     │           └─────────────────────────┘
-  │ every 10 min: button tasks│  AI = local Claude Code (`claude -p`) on Kojo's Claude plan
+  │ listener: button presses  │  AI = local Claude Code (`claude -p`) on Kojo's Claude plan
+  │ via Realtime (websocket)  │
   └───────────────────────────┘
 ```
 
@@ -110,10 +111,11 @@ description (5+ years required, security clearance) are dropped with a reason yo
 
 ```bash
 cd pipeline
-uv run jobsearch schedule install      # daily 7:30am job + a 10-minute task checker (LaunchAgents)
+uv run jobsearch schedule install      # daily 7:30am job + an always-on request listener (LaunchAgents)
 uv run jobsearch schedule status       # loaded? last exit code? recent log lines
 uv run jobsearch local-daily           # what the daily job runs: Workday → score → tasks → tailor (20/day)
 uv run jobsearch tailor --job <id>     # tailor one job now
+uv run jobsearch listen                # handle website button presses as they happen (Supabase Realtime)
 uv run jobsearch eval report           # compare AI scores with your labels (private/eval/)
 ```
 

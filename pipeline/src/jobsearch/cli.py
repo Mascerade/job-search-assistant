@@ -5,7 +5,8 @@ Commands:
   jobsearch score [--dry-run] [--limit N]          AI fit scores for jobs waiting to be scored
   jobsearch tailor [--job ID] [--limit N]           tailored resume + cover letter (best matches first)
   jobsearch render --job ID                        rebuild a job's PDFs after you approve suggestions
-  jobsearch tasks                                  handle button presses from the website
+  jobsearch tasks                                  handle queued button presses from the website, once
+  jobsearch listen                                 handle button presses the moment they happen (Realtime)
   jobsearch local-daily                            the Mac's daily job: Workday, scoring, tasks, tailoring
   jobsearch eval export | report                   evaluation set for the fit scores
   jobsearch schedule install|run-now|status|uninstall   the Mac's daily LaunchAgent
@@ -316,6 +317,15 @@ def _cmd_tasks(_args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_listen(args: argparse.Namespace) -> int:
+    from .listener import run
+
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    run(max_seconds=args.max_seconds)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="jobsearch", description="Job search assistant pipeline")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -353,8 +363,12 @@ def build_parser() -> argparse.ArgumentParser:
     rn.add_argument("--job", required=True)
     rn.set_defaults(func=_cmd_render)
 
-    tk = sub.add_parser("tasks", help="handle button presses from the website")
+    tk = sub.add_parser("tasks", help="handle queued button presses from the website, once")
     tk.set_defaults(func=_cmd_tasks)
+
+    ls = sub.add_parser("listen", help="handle button presses the moment they happen (Supabase Realtime)")
+    ls.add_argument("--max-seconds", type=float, help="stop after this long (for testing)")
+    ls.set_defaults(func=_cmd_listen)
 
     sch = sub.add_parser("schedule", help="the Mac's daily LaunchAgent")
     sch.add_argument("action", choices=["install", "run-now", "status", "uninstall"])
@@ -395,7 +409,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     args = build_parser().parse_args(argv)
     command: Callable[[argparse.Namespace], int] = args.func
     try:

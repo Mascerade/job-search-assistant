@@ -25,12 +25,12 @@ from .llm import claude_binary
 LABEL = "com.jobsearchassistant.local-daily"
 PLIST = Path.home() / "Library" / "LaunchAgents" / f"{LABEL}.plist"
 LOG = Path.home() / "Library" / "Logs" / "jobsearch-local-daily.log"
-# A second, tiny agent: every 10 minutes, handle button presses from the website
-# (render after approval, regenerate, tailor now). Exits immediately when there are none.
+# A second agent: `jobsearch listen` keeps a Supabase Realtime (websocket) connection open
+# and handles website button presses (build PDFs, regenerate, tailor now) as they happen.
+# launchd keeps it running and restarts it if it exits.
 TASKS_LABEL = "com.jobsearchassistant.tasks"
 TASKS_PLIST = Path.home() / "Library" / "LaunchAgents" / f"{TASKS_LABEL}.plist"
 TASKS_LOG = Path.home() / "Library" / "Logs" / "jobsearch-tasks.log"
-TASKS_EVERY_S = 600
 
 
 def _domain() -> str:
@@ -60,8 +60,10 @@ def tasks_plist_dict(uv: str, claude: str) -> dict[str, Any]:
     del d["StartCalendarInterval"]
     d.update(
         Label=TASKS_LABEL,
-        ProgramArguments=[uv, "run", "--project", str(PIPELINE_DIR), "jobsearch", "tasks"],
-        StartInterval=TASKS_EVERY_S,
+        ProgramArguments=[uv, "run", "--project", str(PIPELINE_DIR), "jobsearch", "listen"],
+        RunAtLoad=True,
+        KeepAlive=True,
+        ThrottleInterval=30,  # if it keeps failing (e.g. offline), retry every 30s, not in a tight loop
         StandardOutPath=str(TASKS_LOG),
         StandardErrorPath=str(TASKS_LOG),
     )
@@ -121,9 +123,10 @@ def status() -> str:
         f"Runs daily at {when.get('Hour', 0):02d}:{when.get('Minute', 0):02d} (or on wake if asleep then)"
     )
     tasks_state = _launchctl("print", f"{_domain()}/{TASKS_LABEL}")
+    running = "state = running" in tasks_state.stdout
     lines.append(
-        f"Task checker (every {TASKS_EVERY_S // 60} min): "
-        + ("loaded" if tasks_state.returncode == 0 else "not loaded — run `schedule install`")
+        "Request listener (Realtime): "
+        + ("running" if running else "loaded, not running" if tasks_state.returncode == 0 else "not loaded")
     )
     if LOG.exists():
         tail = LOG.read_text(errors="replace").splitlines()[-8:]

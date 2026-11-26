@@ -370,6 +370,14 @@ def queued_tasks(limit: int) -> list[TaskRow]:
     return _rows(data, TaskRow)
 
 
+def claim_task(task_id: str, step: Literal["writing", "rendering"]) -> bool:
+    """Move a task from queued to working; False if another runner already took it."""
+    data = (
+        client().table("tasks").update({"step": step}).eq("id", task_id).eq("step", "queued").execute().data
+    )
+    return bool(data)
+
+
 def update_task(
     task_id: str, step: Literal["writing", "rendering", "ready", "error"], error: str | None = None
 ) -> None:

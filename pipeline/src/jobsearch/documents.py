@@ -291,7 +291,8 @@ def process_tasks(limit: int = 10) -> list[str]:
             continue
         try:
             if task.kind in ("tailor", "regenerate"):
-                db.update_task(task.id, "writing")
+                if not db.claim_task(task.id, "writing"):
+                    continue  # another runner took it
                 job = db.jobs_by_ids([task.job_id])[0]
                 res = tailor_job(job, profile)
                 if res.suggestions:
@@ -299,7 +300,8 @@ def process_tasks(limit: int = 10) -> list[str]:
                     done.append(f"{task.kind} {job.title}: {res.suggestions} suggestions to review")
                     continue
             elif task.kind == "render":
-                db.update_task(task.id, "rendering")
+                if not db.claim_task(task.id, "rendering"):
+                    continue
                 render_job(task.job_id, profile)
             db.update_task(task.id, "ready")
             done.append(f"{task.kind} {task.job_id}: done")
