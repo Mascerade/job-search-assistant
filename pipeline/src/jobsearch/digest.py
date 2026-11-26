@@ -94,7 +94,8 @@ class Digest:
 # ---------------------------------------------------------------------------
 
 _COLUMNS = (
-    "id, title, company, location, fit_score, fit_reason, pipeline_state, status, applied_at, first_seen_at, tags"
+    "id, title, company, location, fit_score, fit_reason, pipeline_state, status, "
+    "applied_at, first_seen_at, tags"
 )
 
 
