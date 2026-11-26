@@ -14,6 +14,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Calendar,
+  CalendarRange,
   CaseSensitive,
   ChevronDown,
   ChevronRight,
@@ -29,10 +30,12 @@ import {
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { EmptyState, PageHeader } from '@/components/EmptyState'
+import { StartCell, StartTags } from '@/components/StartDate'
 import { StatTile } from '@/components/StatTile'
 import { StatusBadge } from '@/components/StatusBadge'
 import { TrackTag } from '@/components/Tag'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatRelative, shortLocation } from '@/lib/format'
@@ -40,6 +43,7 @@ import { headline, inRange, pct } from '@/lib/insights'
 import { isAutoRejected, needsReview } from '@/lib/jobs'
 import { useJobs, useRuns } from '@/lib/queries'
 import { fitLabel, TRACK_LABEL } from '@/lib/status'
+import { startLine, startSortKey, useAvailableFrom } from '@/lib/timing'
 import type { Job, JobTrack } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -51,7 +55,7 @@ const features = tableFeatures({
 
 const helper = createColumnHelper<typeof features, Job>()
 
-const columns = helper.columns([
+const makeColumns = (availableFrom: string) => helper.columns([
   helper.accessor((j) => j.fit_score ?? undefined, {
     id: 'fit_score',
     header: 'Fit',
@@ -95,6 +99,14 @@ const columns = helper.columns([
     cell: ({ row }) =>
       row.original.track ? <TrackTag track={row.original.track} /> : <span className="text-muted-foreground">—</span>,
   }),
+  // Sorts after-graduation starts first, then not stated, immediately, too early (lib/timing.ts);
+  // best fit first within each group.
+  helper.accessor((j) => `${startSortKey(j, availableFrom)}:${String(100 - (j.fit_score ?? 0)).padStart(3, '0')}`, {
+    id: 'start',
+    header: 'Start',
+    sortFn: 'basic',
+    cell: ({ row }) => <StartCell job={row.original} availableFrom={availableFrom} />,
+  }),
   helper.accessor('first_seen_at', {
     header: 'Found',
     sortFn: 'basic',
@@ -124,6 +136,7 @@ const COLUMN_ICON: Record<string, LucideIcon> = {
   role: CaseSensitive,
   location: MapPin,
   track: Layers,
+  start: CalendarRange,
   first_seen_at: Calendar,
   status: CircleDot,
 }
@@ -202,6 +215,38 @@ function ViewTabs({ rows, view, onChange }: { rows: Job[]; view: View; onChange:
   )
 }
 
+type PhoneSort = 'fit' | 'start' | 'newest'
+const PHONE_SORTS: Record<PhoneSort, { label: string; sorting: SortingState }> = {
+  fit: { label: 'Best fit', sorting: [{ id: 'fit_score', desc: true }] },
+  start: { label: 'Start date', sorting: [{ id: 'start', desc: false }] },
+  newest: { label: 'Newest', sorting: [{ id: 'first_seen_at', desc: true }] },
+}
+
+/** Phones have no column headers to click, so sorting is a menu. */
+function PhoneSortMenu({ sorting, onChange }: { sorting: SortingState; onChange: (s: SortingState) => void }) {
+  const id = sorting[0]?.id
+  const value: PhoneSort = id === 'start' ? 'start' : id === 'first_seen_at' ? 'newest' : 'fit'
+  return (
+    <div className="flex items-center justify-end gap-2 pt-3 md:hidden">
+      <label htmlFor="phone-sort" className="text-sm text-muted-foreground">
+        Sort
+      </label>
+      <Select value={value} onValueChange={(v) => onChange(PHONE_SORTS[v as PhoneSort].sorting)}>
+        <SelectTrigger id="phone-sort" size="sm" className="w-36 pointer-coarse:min-h-11">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {(Object.keys(PHONE_SORTS) as PhoneSort[]).map((k) => (
+            <SelectItem key={k} value={k}>
+              {PHONE_SORTS[k].label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  )
+}
+
 function ColumnIcon({ id }: { id: string }) {
   const Icon = COLUMN_ICON[id]
   return Icon ? <Icon className="size-3.5" aria-hidden="true" /> : null
@@ -236,6 +281,8 @@ export function TodayPage() {
   const { data: jobs, isLoading, error } = useJobs()
   const navigate = useNavigate()
   const [sorting, setSorting] = useState<SortingState>([{ id: 'fit_score', desc: true }])
+  const availableFrom = useAvailableFrom()
+  const columns = useMemo(() => makeColumns(availableFrom), [availableFrom])
   const all = useMemo(() => (jobs ?? []).filter(needsReview), [jobs])
   const [view, setView] = useState<View>('all')
   const rows = useMemo(() => (view === 'all' ? all : all.filter((j) => j.track === view)), [all, view])
@@ -296,6 +343,7 @@ export function TodayPage() {
         <>
           <HeadlineRow jobs={jobs ?? []} rows={all} />
           <ViewTabs rows={all} view={view} onChange={setView} />
+          <PhoneSortMenu sorting={sorting} onChange={setSorting} />
 
           {/* Phones: flat rows instead of a wide table (no sideways scrolling). */}
           <ul className="flex flex-col md:hidden">
@@ -314,9 +362,13 @@ export function TodayPage() {
                     {job.company}
                     {job.location && ` · ${shortLocation(job.location)}`}
                   </span>
+                  {startLine(job, availableFrom) && (
+                    <span className="text-xs text-muted-foreground">{startLine(job, availableFrom)}</span>
+                  )}
                   <span className="flex flex-wrap gap-1.5">
                     <StatusBadge status={job.status} />
                     {job.track && <TrackTag track={job.track} />}
+                    <StartTags job={job} availableFrom={availableFrom} />
                     {job.pipeline_state === 'needs_approval' && (
                       <span className="text-xs font-medium text-warning-text">Review suggestions</span>
                     )}

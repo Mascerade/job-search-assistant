@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
 import { useSaveSettings, useSettings } from '@/lib/queries'
 import { TRACK_LABEL, TRACK_ORDER } from '@/lib/status'
+import { DEFAULT_AVAILABLE_FROM } from '@/lib/timing'
 import type { AppSettings, JobTrack } from '@/lib/types'
 
 // Matches the pipeline's Settings.focus_until default.
@@ -68,6 +69,7 @@ interface FormState {
   include_hybrid: boolean
   towns: string
   focus_until: string
+  available_from: string
   tracks: Record<JobTrack, { enabled: boolean; keywords: string }>
 }
 
@@ -83,6 +85,7 @@ function toForm(s: AppSettings): FormState {
     towns: s.locations.towns.join('\n'),
     // Missing = the pipeline's default (March 1, 2027); null = turned off.
     focus_until: s.focus_until === undefined ? DEFAULT_FOCUS_UNTIL : (s.focus_until ?? ''),
+    available_from: s.available_from || DEFAULT_AVAILABLE_FROM,
     tracks: Object.fromEntries(
       (Object.keys(s.tracks) as JobTrack[]).map((t) => [
         t,
@@ -92,7 +95,9 @@ function toForm(s: AppSettings): FormState {
   }
 }
 
-type Errors = Partial<Record<'fit_threshold' | 'monthly_spend_cap_usd' | 'experience_max_years', string>>
+type Errors = Partial<
+  Record<'fit_threshold' | 'monthly_spend_cap_usd' | 'experience_max_years' | 'available_from', string>
+>
 
 function validate(f: FormState): Errors {
   const e: Errors = {}
@@ -102,6 +107,7 @@ function validate(f: FormState): Errors {
   if (!Number.isFinite(cap) || cap < 0) e.monthly_spend_cap_usd = 'Use a dollar amount of 0 or more.'
   const y = Number(f.experience_max_years)
   if (!Number.isInteger(y) || y < 0 || y > 10) e.experience_max_years = 'Use a whole number from 0 to 10.'
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f.available_from)) e.available_from = 'Pick the first day you could start.'
   return e
 }
 
@@ -136,6 +142,7 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
       full_time_only: form.full_time_only,
       exclude_clearance: form.exclude_clearance,
       focus_until: form.focus_until || null,
+      available_from: form.available_from,
       locations: {
         include_remote_us: form.include_remote_us,
         include_hybrid: form.include_hybrid,
@@ -203,6 +210,28 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
             <Toggle id="exclude_clearance" label="Skip roles that need a security clearance" checked={form.exclude_clearance} onChange={(v) => patch({ exclude_clearance: v })} />
           </CardContent>
           <CardContent className="flex flex-col gap-1.5 border-t pt-4">
+            <Label htmlFor="available_from">Available from</Label>
+            <Input
+              id="available_from"
+              type="date"
+              required
+              className="w-44 tabular-nums"
+              value={form.available_from}
+              onChange={(e) => patch({ available_from: e.target.value })}
+              aria-invalid={errors.available_from ? true : undefined}
+              aria-describedby={errors.available_from ? 'available_from-error available_from-hint' : 'available_from-hint'}
+            />
+            {errors.available_from && (
+              <p id="available_from-error" className="text-xs text-destructive">
+                {errors.available_from}
+              </p>
+            )}
+            <p id="available_from-hint" className="max-w-prose text-xs text-muted-foreground">
+              The first day you can start a job. Postings whose start date reaches it are marked “After graduation” on
+              Today, and they get their resumes and cover letters first.
+            </p>
+          </CardContent>
+          <CardContent className="flex flex-col gap-1.5 border-t pt-4">
             <Label htmlFor="focus_until">Software jobs first until</Label>
             <Input
               id="focus_until"
@@ -214,9 +243,9 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
             />
             <p id="focus_until-hint" className="max-w-prose text-xs text-muted-foreground">
               Until this date the daily resumes and cover letters go to software jobs first, then university tech,
-              then program admin (admin roles usually hire a few weeks before the start date). Jobs with a future
-              start date and best fits still lead each group; staffing agencies always come last. Clear it to go
-              by best fit only.
+              then program admin (admin roles usually hire a few weeks before the start date). Jobs that start after
+              you're available and best fits still lead each group; staffing agencies always come last. Clear it to
+              go by best fit only.
             </p>
           </CardContent>
         </Card>

@@ -318,3 +318,16 @@ Role type: gray tag + dot in the track's chart color.
   blue ramp failed the validator (neighbouring steps too close).
 - Bars ≤ 24px, 4px rounded data end, 2px gaps; hairline grid; tooltips on hover and focus with the
   value first; one hero figure per view (% applied).
+
+### Start dates (2026-11-26, approved from the Figma "v2 Start column" frames)
+- Today's table has a **Start** column (CalendarRange icon) between Role type and Found. Line 1 is the
+  window ("Jun – Aug 2027", "Immediately"), or "Not stated" in muted text. Line 2 is a tag:
+  - green "After graduation" when the window reaches Settings → Available from;
+  - gray "Before graduation";
+  - red "Ends <date>" when a fixed term ends within 90 days of that date; otherwise a muted
+    "Term ends <date>" caption.
+- Sorting Start ascending: after graduation → not stated → immediately → too early, then best fit.
+  Phones get a Sort menu (Best fit / Start date / Newest).
+- Phone rows add one muted line ("Starts …" / "Term ends …") only when the posting says something,
+  plus the same tags. Job detail has a **Start** property with the posting's words as a quote.
+- Logic lives in `web/src/lib/timing.ts` (mirrors `pipeline/src/jobsearch/timing.py`).

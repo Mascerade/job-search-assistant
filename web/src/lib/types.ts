@@ -30,5 +30,7 @@ export interface AppSettings {
   tracks: Record<JobTrack, { enabled: boolean; keywords: string[] }>
   /** YYYY-MM-DD. Until then the daily documents go software → hybrid → admin; null = best fit. */
   focus_until?: string | null
+  /** YYYY-MM-DD: the first day you can start a job. The Start column compares postings with it. */
+  available_from?: string
   locations: { include_remote_us: boolean; include_hybrid: boolean; towns: string[] }
 }

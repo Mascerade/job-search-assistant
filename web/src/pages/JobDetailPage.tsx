@@ -3,6 +3,7 @@ import {
   Building2,
   Calendar,
   CalendarClock,
+  CalendarRange,
   CircleDot,
   CircleOff,
   ExternalLink,
@@ -30,6 +31,7 @@ import { FitScore } from '@/components/FitScore'
 import { JobForm } from '@/components/JobForm'
 import { EMPTY_JOB_FORM, toJobInsert, type JobFormValues } from '@/lib/jobForm'
 import { MoveToMenu } from '@/components/MoveToMenu'
+import { StartTags } from '@/components/StartDate'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Tag, TrackTag } from '@/components/Tag'
 import { Button } from '@/components/ui/button'
@@ -51,6 +53,7 @@ import { formatDateTime, formatRelative, formatSalary } from '@/lib/format'
 import { useDeleteJob, useJob, useLatestScore, useStatusHistory, useUpdateJob } from '@/lib/queries'
 import { sourceLabel, TAG_COLOR, TAG_LABEL } from '@/lib/jobs'
 import { STATUS } from '@/lib/status'
+import { formatDay, startWindowLabel, termEndsSoon, useAvailableFrom } from '@/lib/timing'
 import type { Contact, Job } from '@/lib/types'
 
 function toFormValues(job: Job): JobFormValues {
@@ -114,6 +117,22 @@ function Property({ icon: Icon, label, children }: { icon: LucideIcon; label: st
       </dt>
       <dd className="flex min-h-7 min-w-0 flex-wrap items-center gap-1.5 text-sm">{children}</dd>
     </div>
+  )
+}
+
+/** When the employer wants someone to begin, in the posting's own words when it says. */
+function StartProperty({ job }: { job: Job }) {
+  const availableFrom = useAvailableFrom()
+  const quiet = job.start_kind === 'unstated'
+  return (
+    <>
+      <span className={quiet ? 'text-muted-foreground' : undefined}>{startWindowLabel(job)}</span>
+      <StartTags job={job} availableFrom={availableFrom} />
+      {job.term_end && !termEndsSoon(job, availableFrom) && (
+        <span className="text-muted-foreground">· term ends {formatDay(job.term_end)}</span>
+      )}
+      {job.start_note && <span className="text-xs text-muted-foreground">“{job.start_note}”, from the posting</span>}
+    </>
   )
 }
 
@@ -366,6 +385,11 @@ export function JobDetailPage() {
           {(job.location || job.remote_type) && (
             <Property icon={MapPin} label="Location">
               {[job.location, job.remote_type].filter(Boolean).join(' · ')}
+            </Property>
+          )}
+          {job.start_kind && (
+            <Property icon={CalendarRange} label="Start">
+              <StartProperty job={job} />
             </Property>
           )}
           {salary && (
