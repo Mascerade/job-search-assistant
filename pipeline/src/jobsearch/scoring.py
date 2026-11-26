@@ -15,7 +15,7 @@ from __future__ import annotations
 import textwrap
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError
@@ -244,6 +244,19 @@ class ScoringSummary:
     errors: list[str] = field(default_factory=list)
 
 
+def _run_counts(summary: ScoringSummary) -> dict[str, int]:
+    counts = {
+        "scored": summary.scored,
+        "matches": summary.kept,
+        "below_threshold": summary.below,
+        "failed": summary.failed,
+    }
+    if summary.credential_expires_at is not None:
+        # Lets the website warn before the Claude Code sign-in runs out.
+        counts["signin_days_left"] = max((summary.credential_expires_at - datetime.now(UTC)).days, 0)
+    return counts
+
+
 def run_scoring(
     *,
     limit: int | None = None,
@@ -317,8 +330,7 @@ def run_scoring(
             db.finish_run(
                 run_id,
                 status=status,
-                counts={"scored": summary.scored, "matches": summary.kept, "below_threshold": summary.below,
-                        "failed": summary.failed},
+counts=_run_counts(summary),
                 error="\n".join(summary.errors) or None,
                 cost_usd=summary.cost_usd,
             )  # fmt: skip

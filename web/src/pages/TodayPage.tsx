@@ -8,7 +8,7 @@ import {
   useTable,
   type SortingState,
 } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Inbox, MapPin, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Inbox, KeyRound, MapPin, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { EmptyState, PageHeader } from '@/components/EmptyState'
@@ -17,7 +17,7 @@ import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { useJobs } from '@/lib/queries'
+import { useJobs, useRuns } from '@/lib/queries'
 import { TRACK_LABEL } from '@/lib/status'
 import type { Job } from '@/lib/types'
 import { formatRelative, shortLocation } from '@/lib/format'
@@ -96,6 +96,25 @@ function SortIcon({ dir }: { dir: false | 'asc' | 'desc' }) {
   return <ArrowUpDown className="size-3.5 opacity-50" aria-hidden="true" />
 }
 
+/** Warns when the Mac's Claude Code sign-in is about to run out (the AI steps would pause). */
+function SignInWarning() {
+  const { data: runs } = useRuns()
+  const latest = runs?.find((r) => r.kind === 'scoring' && r.status === 'succeeded')
+  const days = (latest?.counts as Record<string, number> | null)?.signin_days_left
+  if (days === undefined || days > 10) return null
+  return (
+    <div role="status" className="mb-6 flex items-start gap-3 rounded-xl border border-warning-text/40 bg-card px-4 py-3 text-sm">
+      <KeyRound className="mt-0.5 size-4 shrink-0 text-warning-text" aria-hidden="true" />
+      <p>
+        <span className="font-medium">Claude Code sign-in ends in {days} {days === 1 ? 'day' : 'days'}.</span>{' '}
+        After that, scoring pauses. On your Mac, run <code className="font-mono">claude</code> and type{' '}
+        <code className="font-mono">/login</code>, or set up the one-year token from{' '}
+        <code className="font-mono">claude setup-token</code>.
+      </p>
+    </div>
+  )
+}
+
 export function TodayPage() {
   const { data: jobs, isLoading, error } = useJobs()
   const navigate = useNavigate()
@@ -126,6 +145,8 @@ export function TodayPage() {
           </Button>
         }
       />
+
+      <SignInWarning />
 
       {error && (
         <p role="alert" className="mb-4 text-sm text-destructive">
