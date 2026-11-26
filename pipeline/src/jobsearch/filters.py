@@ -302,6 +302,36 @@ def company_key(name: str) -> str:
     return re.sub(r" +", " ", company)
 
 
+_AGENCY_WORDS = re.compile(
+    r"\b(staffing|recruiting|recruitment|recruiters|personnel|talent solutions|workforce solutions"
+    r"|search group)\b"
+)
+# Agency wording: "Our client is seeking…", "Our client seeks…", "Our client, an industry leader…",
+# "on behalf of our client". Consultancies write "our clients" or "our client's needs" instead.
+_OUR_CLIENT = re.compile(
+    r"\b(?:on behalf of|for) our client\b(?!['’]s)"
+    r"|\bour client(?:,| is\b| seeks\b| has\b| needs\b| located\b| based\b| in\b)",
+    re.IGNORECASE,
+)
+
+
+def is_staffing_agency(
+    company: str, description: str | None, known: frozenset[str], *, read_description: bool
+) -> bool:
+    """A staffing/recruiting agency posting for another employer?
+
+    `known` holds company_key()s from config/staffing_agencies.yaml; each also matches longer
+    names that start with it. The "our client" check is only used for aggregator postings,
+    since employer career sites aren't agencies.
+    """
+    key = company_key(company)
+    if any(key == a or key.startswith(a + " ") for a in known):
+        return True
+    if _AGENCY_WORDS.search(key):
+        return True
+    return read_description and bool(description and _OUR_CLIENT.search(description))
+
+
 def dedupe_key(posting: Posting) -> str:
     title = _words(re.split(r"\s[-–|(]\s?", posting.title)[0])  # drop " - Boston", " (Remote)"
     place = _words(posting.locations[0].split(",")[0]) if posting.locations else ""

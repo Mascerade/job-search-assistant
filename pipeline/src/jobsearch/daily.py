@@ -16,9 +16,17 @@ from typing import TYPE_CHECKING, Literal, get_args
 import yaml
 
 from .config import REPO_DIR
-from .filters import Verdict, company_key, dedupe_key, detail_verdict, location_verdict, title_verdict
+from .filters import (
+    Verdict,
+    company_key,
+    dedupe_key,
+    detail_verdict,
+    is_staffing_agency,
+    location_verdict,
+    title_verdict,
+)
 from .http import Http
-from .models import Ats, Board, JobRow, Posting, Settings
+from .models import STAFFING_AGENCY_TAG, Ats, Board, JobRow, Posting, Settings
 from .sources import enrich, fetch
 
 if TYPE_CHECKING:
@@ -27,6 +35,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("jobsearch.daily")
 
 SOURCES_FILE = REPO_DIR / "config" / "sources.yaml"
+AGENCIES_FILE = REPO_DIR / "config" / "staffing_agencies.yaml"
 
 Where = Literal["all", "cloud", "local"]
 # Workday answers cloud servers (GitHub Actions) with persistent 429s but works fine from
@@ -48,6 +57,11 @@ def direct_companies(boards: list[Board]) -> frozenset[str]:
     )
 
 
+def load_staffing_agencies(path: Path = AGENCIES_FILE) -> frozenset[str]:
+    data = yaml.safe_load(path.read_text()) or {}
+    return frozenset(company_key(str(name)) for name in data.get("agencies") or [])
+
+
 def load_boards(path: Path = SOURCES_FILE) -> list[Board]:
     data = yaml.safe_load(path.read_text()) or {}
     boards = []
@@ -67,11 +81,16 @@ class BoardResult:
 
 
 def process_board(
-    board: Board, settings: Settings, http: Http, covered: frozenset[str] = frozenset()
+    board: Board,
+    settings: Settings,
+    http: Http,
+    covered: frozenset[str] = frozenset(),
+    agencies: frozenset[str] = frozenset(),
 ) -> BoardResult:
     """Fetch one board and run the filters. Never raises; errors are recorded.
 
-    `covered` (see direct_companies) only applies to aggregator boards.
+    `covered` (see direct_companies) only applies to aggregator boards; `agencies` (see
+    load_staffing_agencies) tags postings from staffing agencies.
     """
     result = BoardResult(board)
     try:
@@ -108,14 +127,16 @@ def process_board(
                     continue
         dv = detail_verdict(p, settings)
         result.counts["kept" if dv.keep else "filtered_detail"] += 1
-        result.rows.append(
-            (
-                p,
-                Verdict(
-                    keep=dv.keep, reason=dv.reason, track=tv.track, remote_type=lv.remote_type, tags=lv.tags
-                ),
-            )
+        tags = lv.tags
+        if is_staffing_agency(
+            p.company, p.description, agencies, read_description=board.ats in AGGREGATOR_ATS
+        ):
+            tags = [*tags, STAFFING_AGENCY_TAG]
+            result.counts["staffing_agency"] += 1
+        verdict = Verdict(
+            keep=dv.keep, reason=dv.reason, track=tv.track, remote_type=lv.remote_type, tags=tags
         )
+        result.rows.append((p, verdict))
     return result
 
 
@@ -165,6 +186,7 @@ def run_daily(
     settings = db.load_settings()
     boards = load_boards()
     covered = direct_companies(boards)  # from every board, before narrowing to this run's
+    agencies = load_staffing_agencies()
     if only:
         boards = [b for b in boards if b.key in only or b.token in only or b.company in only]
     if where != "all":
@@ -176,7 +198,7 @@ def run_daily(
     kept: list[tuple[Posting, Verdict]] = []
     try:
         with ThreadPoolExecutor(max_workers=workers) as pool:
-            results = list(pool.map(lambda b: process_board(b, settings, http, covered), boards))
+            results = list(pool.map(lambda b: process_board(b, settings, http, covered, agencies), boards))
 
         rows: list[JobRow] = []
         for r in results:

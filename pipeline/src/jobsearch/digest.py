@@ -31,6 +31,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from .config import ConfigError
+from .models import STAFFING_AGENCY_TAG
 
 MATCH_STATES = ("scored", "needs_approval", "tailoring", "ready")
 FOLLOW_UP_DAYS = 14
@@ -49,6 +50,11 @@ class DigestJob(BaseModel):
     status: str
     applied_at: datetime | None = None
     first_seen_at: datetime
+    tags: list[str] = []
+
+    def employer(self) -> str:
+        """Company name, marked when it's a staffing agency posting for someone else."""
+        return self.company + (" (staffing agency)" if STAFFING_AGENCY_TAG in self.tags else "")
 
 
 @dataclass
@@ -88,7 +94,7 @@ class Digest:
 # ---------------------------------------------------------------------------
 
 _COLUMNS = (
-    "id, title, company, location, fit_score, fit_reason, pipeline_state, status, applied_at, first_seen_at"
+    "id, title, company, location, fit_score, fit_reason, pipeline_state, status, applied_at, first_seen_at, tags"
 )
 
 
@@ -200,7 +206,7 @@ def _section_html(title: str, jobs: list[DigestJob], *, note: str = "", detail: 
         rows.append(
             f'<li style="margin:0 0 10px 0"><a href="{html.escape(_job_link(j))}" '
             f'style="color:{PRIMARY};font-weight:600;text-decoration:none">{html.escape(j.title)}</a>'
-            f' <span style="color:{MUTED}">— {html.escape(j.company)}</span><br>'
+            f' <span style="color:{MUTED}">— {html.escape(j.employer())}</span><br>'
             f'<span style="color:{MUTED};font-size:13px">{score}{html.escape(extra)}</span></li>'
         )
     more = (
@@ -275,7 +281,7 @@ def render_text(d: Digest) -> str:
             lines.append(f"{title} ({len(jobs)})")
             for j in jobs[:LIST_LIMIT]:
                 score = f"[{j.fit_score}] " if j.fit_score else ""
-                lines.append(f"- {score}{j.title} — {j.company}: {_job_link(j)}")
+                lines.append(f"- {score}{j.title} — {j.employer()}: {_job_link(j)}")
             lines.append("")
     return "\n".join(lines)
 

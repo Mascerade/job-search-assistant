@@ -92,6 +92,12 @@ from employers we already read directly are skipped (`aliases:` in `sources.yaml
 names, like "Massachusetts Institute of Technology" for MIT). Adzuna only shares a snippet of each
 description, so those jobs carry a "Short description" tag; open the link for the full posting.
 
+**Staffing agencies** (companies that post jobs for other employers, often as contracts, with the
+real employer hidden) get a "Staffing agency" tag. The daily tailoring does every direct-employer
+match first and only then agency jobs, so the 20 daily documents go where a tailored cover letter
+counts most. The list is `config/staffing_agencies.yaml`; names with "staffing"/"recruiting" and
+Adzuna postings written like "Our client is seeking…" are caught automatically.
+
 **Cleanup** runs after the feed (`uv run jobsearch cleanup --dry-run` shows what it would do):
 postings that closed 30+ days ago and Adzuna postings 45+ days old are deleted if you never
 touched them (status still New / Docs ready / Not interested, no notes or contacts; hand-added

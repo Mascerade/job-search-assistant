@@ -16,6 +16,8 @@ export const TAG_LABEL: Record<string, string> = {
   'immediate-start': 'Wants someone soon',
   // Adzuna only shares a snippet of the posting; the full text is behind the job link.
   'short-description': 'Short description',
+  // Posted by a recruiting agency for another employer; tailored after direct-employer matches.
+  'staffing-agency': 'Staffing agency',
 }
 
 const AGGREGATORS: Partial<Record<Job['source'], string>> = {

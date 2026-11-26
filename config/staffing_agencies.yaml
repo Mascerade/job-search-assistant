@@ -1,0 +1,71 @@
+# Staffing and recruiting agencies: companies that post jobs on behalf of other employers.
+#
+# Their postings get a "Staffing agency" tag, and the daily tailoring writes documents for
+# them only after every direct-employer match is done. You can still tailor one anytime with
+# "Tailor now" on the job's page.
+#
+# Matching ignores capitals, punctuation, and "Inc"/"LLC"; a name also matches longer names
+# that start with it ("Adecco" matches "Adecco US, Inc."). Companies whose names contain
+# staffing / recruiting / recruitment / personnel / talent solutions / workforce solutions /
+# search group are caught without being listed, and so are Adzuna postings written the way
+# agencies write them ("Our client is seeking…"). Avoid short or place-like names here
+# ("Beacon Hill" would also match the Beacon Hill Village nonprofit).
+agencies:
+  - Acadia Technologies
+  - Actalent
+  - Adecco
+  - Advantage Resourcing
+  - Aerotek
+  - Akkodis
+  - Allegis
+  - Apex Systems
+  - Aquent
+  - Aston Carter
+  - Collabera
+  - Compunnel
+  - Creative Circle
+  - CyberCoders
+  - CYNET Systems
+  - Dexian
+  - Diverse Lynx
+  - DSJ Global
+  - Eliassen Group
+  - Experis
+  - Express Employment Professionals
+  - Genesis10
+  - Hire Resolve
+  - Huxley
+  - Insight Global
+  - Jobot
+  - Judge Group
+  - Kelly Services
+  - KellyMitchell
+  - Kforce
+  - LanceSoft
+  - Manpower
+  - ManpowerGroup
+  - Mastech Digital
+  - Matlen Silver
+  - Michael Page
+  - Mindlance
+  - Modis
+  - Motion Recruitment
+  - Oxford Global Resources
+  - Planet Group
+  - Pyramid Consulting
+  - Randstad
+  - Robert Half
+  - Russell Tobin
+  - SECURE RPO
+  - SGS Consulting
+  - Signature Consultants
+  - Spherion
+  - SynergisticIT
+  - System One
+  - TEKsystems
+  - The Computer Merchant
+  - Vaco
+  - Volt
+  - Winter Wyman
+  - Yoh
+  - 24 Seven

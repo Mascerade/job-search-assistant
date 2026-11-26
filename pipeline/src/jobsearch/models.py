@@ -79,6 +79,10 @@ class Posting(BaseModel):
         return "; ".join(self.locations) or None
 
 
+# Tag on postings from staffing / recruiting agencies (see config/staffing_agencies.yaml).
+STAFFING_AGENCY_TAG = "staffing-agency"
+
+
 class JobForScoring(BaseModel):
     id: str
     company: str
@@ -90,6 +94,7 @@ class JobForScoring(BaseModel):
     salary_max: int | None = None
     track: Track | None = None
     description: str | None = None
+    tags: list[str] = Field(default_factory=list)  # read for tailoring order; not sent to the AI
 
 
 class TrackSettings(BaseModel):

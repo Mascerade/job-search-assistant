@@ -17,7 +17,7 @@ from pydantic import BaseModel, TypeAdapter
 from supabase import Client, create_client
 
 from .config import load_config
-from .models import JobForScoring, JobRow, Settings
+from .models import STAFFING_AGENCY_TAG, JobForScoring, JobRow, Settings
 
 RunKind = Literal["daily", "local", "scoring", "tailoring", "tasks", "digest", "cleanup", "on_demand"]
 RunStatus = Literal["running", "succeeded", "failed"]
@@ -339,21 +339,26 @@ def mark_job_error(job_id: str) -> None:
     client().table("jobs").update({"pipeline_state": "error"}).eq("id", job_id).execute()
 
 
+def direct_employers_first(jobs: list[JobForScoring]) -> list[JobForScoring]:
+    """Staffing-agency postings after every direct-employer job; best-fit order kept within each."""
+    return sorted(jobs, key=lambda j: STAFFING_AGENCY_TAG in j.tags)  # sorted() is stable
+
+
 def jobs_to_tailor(limit: int) -> list[JobForScoring]:
-    """Open matches without documents that Kojo hasn't acted on, best fit first."""
+    """Open matches without documents that Kojo hasn't acted on: direct employers best fit
+    first, then staffing agencies."""
     data = (
         client()
         .table("jobs")
-        .select(_SCORING_COLUMNS)
+        .select(_SCORING_COLUMNS + ", tags")
         .eq("pipeline_state", "scored")
         .eq("status", "new")
         .is_("closed_at", "null")
         .order("fit_score", desc=True)
-        .limit(limit)
         .execute()
         .data
     )
-    return _rows(data, JobForScoring)
+    return direct_employers_first(_rows(data, JobForScoring))[:limit]
 
 
 def queued_tasks(limit: int) -> list[TaskRow]:

@@ -157,3 +157,12 @@ def test_the_same_job_listed_twice_is_kept_once() -> None:
         return httpx.Response(200, json={"results": [first, twin]})
 
     assert [p.native_id for p in fetch(BOARD, http_returning(handler))] == ["4400000001"]
+
+
+def test_agency_postings_are_tagged_and_counted() -> None:
+    agencies = frozenset({"example health tech"})  # pretend the first fixture company is an agency
+    result = process_board(BOARD, SETTINGS, fixture_http(), frozenset(), agencies)
+    tags = {p.company: v.tags for p, v in result.rows}
+    assert "staffing-agency" in tags["Example Health Tech"]
+    assert "staffing-agency" not in tags["Massachusetts Institute of Technology"]
+    assert result.counts["staffing_agency"] == 1
