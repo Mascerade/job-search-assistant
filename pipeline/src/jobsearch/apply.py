@@ -99,7 +99,9 @@ def apply_url(job: ApplyJobRow) -> str | None:
     if ats == "greenhouse" and job.source == "greenhouse" and job.source_board and job.source_job_id:
         token = job.source_board.split(":", 1)[1].split("/", 1)[0]
         native = job.source_job_id.split(":", 1)[1]
-        return f"https://job-boards.greenhouse.io/{token}/jobs/{native}"
+        # The standalone form: the job-board page redirects to the employer's own careers page
+        # when they host one (it embeds the form there, behind their cookie banner).
+        return f"https://job-boards.greenhouse.io/embed/job_app?for={token}&token={native}"
     if ats == "lever" and "jobs.lever.co" in url:
         return url if url.endswith("/apply") else f"{url}/apply"
     if ats == "ashby" and "jobs.ashbyhq.com" in url:

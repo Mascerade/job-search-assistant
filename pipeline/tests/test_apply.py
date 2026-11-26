@@ -74,7 +74,7 @@ def test_match_job_by_id_prefix_and_words() -> None:
 
 
 def test_apply_url_goes_straight_to_the_form() -> None:
-    assert apply_url(job()) == "https://job-boards.greenhouse.io/formlabs/jobs/7012345"
+    assert apply_url(job()) == "https://job-boards.greenhouse.io/embed/job_app?for=formlabs&token=7012345"
     lever = job(source="lever", source_board="lever:acme", url="https://jobs.lever.co/acme/1b2c-3d4e")
     assert apply_url(lever) == "https://jobs.lever.co/acme/1b2c-3d4e/apply"
     ashby = job(source="ashby", source_board="ashby:suno", url="https://jobs.ashbyhq.com/suno/9f8e/")
@@ -165,7 +165,10 @@ def test_packet_has_what_the_form_needs() -> None:
     packet = build_packet(
         job(), PROFILE, 7, date(2027, 6, 1), [], files, ["Dear team, first.", "Second."], "x" * 9000
     )
-    assert packet["job"]["apply_url"] == "https://job-boards.greenhouse.io/formlabs/jobs/7012345"
+    assert (
+        packet["job"]["apply_url"]
+        == "https://job-boards.greenhouse.io/embed/job_app?for=formlabs&token=7012345"
+    )
     assert (packet["you"]["first_name"], packet["you"]["last_name"]) == ("Alex", "Example")
     assert packet["answers"]["earliest_start"] == "2027-06-01"
     assert packet["answers"]["how_heard"] == "Company careers site"
@@ -182,7 +185,7 @@ def test_packet_has_what_the_form_needs() -> None:
 
 RECORD = SubmittedRecord.model_validate({
     "submitted_by": "kojo",
-    "url": "https://job-boards.greenhouse.io/formlabs/jobs/7012345",
+    "url": "https://job-boards.greenhouse.io/embed/job_app?for=formlabs&token=7012345",
     "confirmation": "Thank you for applying.",
     "fields": [
         {"field": "First name", "value": "Alex", "source": "profile"},
