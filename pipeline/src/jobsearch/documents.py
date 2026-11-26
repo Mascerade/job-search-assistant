@@ -4,6 +4,8 @@ tailor_job   write (Opus) → code checks → fact check (Sonnet) → save both 
              and any suggestions; if nothing needs approval, render right away
 render_job   apply Kojo's decisions (and edits) → fit the resume to one page →
              Word + PDF for both → upload to private Storage → job is "Docs ready"
+final_documents   the latest documents with Kojo's decisions applied (also used by
+             apply assist, so essay drafts start from the final cover letter)
 run_tailoring   the daily best-first pass over matches without documents (capped)
 process_tasks   button presses from the website: tailor, regenerate, render
 """
@@ -26,7 +28,7 @@ from .tailor import tailor
 from .verify import apply_decisions, code_checks, model_check, obvious_skills, suggestions
 
 if TYPE_CHECKING:
-    from .db import DecisionRow
+    from .db import DecisionRow, DocumentRow
 
 WRITER_MODEL = "opus"
 CHECKER_MODEL = "sonnet"
@@ -156,8 +158,19 @@ def _slug(text: str) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "_", text).strip("_")[:60]
 
 
-def render_job(job_id: str, profile: Profile) -> None:
-    """Render the latest resume + cover letter once no suggestion is pending."""
+@dataclass
+class FinalDocuments:
+    resume_doc: DocumentRow
+    cover_doc: DocumentRow
+    decisions: list[DecisionRow]
+    edited: Tailored  # Kojo's edits applied; suggestions still marked (the skill review needs them)
+    final: Tailored  # what's on the PDFs: approved suggestions kept, the rest dropped
+
+
+def final_documents(job_id: str) -> FinalDocuments:
+    """The latest resume + cover letter with Kojo's decisions and edits applied.
+
+    Raises RenderError while documents are missing or a suggestion is still pending."""
     from . import db
 
     docs = db.latest_documents(job_id)
@@ -168,16 +181,25 @@ def render_job(job_id: str, profile: Profile) -> None:
     if any(d.decision == "pending" for d in decisions):
         raise RenderError("some suggestions are still waiting for approval")
 
-    tailored = Tailored(
+    edited = Tailored(
         resume=ResumeContent.model_validate(resume_doc.content["tailored"]),
         cover_letter=CoverLetterContent.model_validate(cover_doc.content["tailored"]),
     )
     approved = {d.path for d in decisions if d.decision == "approved"}
     for d in decisions:  # apply Kojo's edits to approved suggestions
         if d.decision == "approved" and d.final_text:
-            _set_text(tailored, d.path, d.final_text)
-    _remember_skill_decisions(tailored, decisions, profile)
-    final = apply_decisions(tailored, approved)
+            _set_text(edited, d.path, d.final_text)
+    final = apply_decisions(edited, approved)  # works on a copy
+    return FinalDocuments(resume_doc, cover_doc, decisions, edited, final)
+
+
+def render_job(job_id: str, profile: Profile) -> None:
+    """Render the latest resume + cover letter once no suggestion is pending."""
+    from . import db
+
+    docs = final_documents(job_id)
+    resume_doc, cover_doc, final = docs.resume_doc, docs.cover_doc, docs.final
+    _remember_skill_decisions(docs.edited, docs.decisions, profile)
     if len(final.cover_letter.paragraphs) < 2:
         raise RenderError("the cover letter is too short after the rejected suggestions; regenerate it")
 

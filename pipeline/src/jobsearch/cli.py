@@ -10,6 +10,9 @@ Commands:
   jobsearch listen                                 handle button presses the moment they happen (Realtime)
   jobsearch local-daily                            the Mac's daily job (Workday → score → tailor → digest)
   jobsearch digest [--dry-run]                     the morning digest email
+  jobsearch apply prepare JOB [--force]            apply assist: check a job and write its packet
+  jobsearch apply done JOB --record FILE           after you submit: mark Applied, save the record
+  jobsearch apply remember -q QUESTION -a ANSWER   save an approved answer to a recurring question
   jobsearch eval export | report                   evaluation set for the fit scores
   jobsearch schedule install|run-now|status|uninstall   the Mac's daily LaunchAgent
   jobsearch owner create --email you@example.com   register the one account allowed to sign in
@@ -36,6 +39,7 @@ from .llm import AuthExpiredError
 from .profile import Profile, load_profile, profile_from_data
 
 if TYPE_CHECKING:
+    from .db import ApplyJobRow
     from .documents import TailoringSummary
     from .scoring import ScoringSummary
     from .timing import TimingSummary
@@ -398,6 +402,72 @@ def _cmd_digest(args: argparse.Namespace) -> int:
     return 0
 
 
+_ISSUE_LABEL = {"block": "Blocked", "warn": "Heads up", "ask": "Will ask you"}
+
+
+def _print_candidates(query: str, jobs: list[ApplyJobRow]) -> None:
+    if not jobs:
+        print(f'No job matches "{query}". Use the id shown on the job page, or words from the title.')
+        return
+    print(f'"{query}" matches {len(jobs)} jobs; run it again with one of these ids:')
+    for j in jobs[:12]:
+        print(f"  {j.id[:8]}  {j.title} — {j.company} ({j.status.replace('_', ' ')})")
+
+
+def _cmd_apply_prepare(args: argparse.Namespace) -> int:
+    from .apply import blocking, prepare
+
+    p = prepare(args.job, force=args.force)
+    if p.job is None:
+        _print_candidates(args.job, p.candidates or [])
+        return 1
+    print(f"{p.job.title} — {p.job.company} ({p.job.id[:8]})")
+    for issue in p.issues or []:
+        print(f"  {_ISSUE_LABEL[issue.level]}: {issue.text}")
+    if p.packet_path is None:
+        hint = (
+            " (--force goes ahead for closed or already-applied jobs)"
+            if blocking(p.issues or [], force=False) and not blocking(p.issues or [], force=True)
+            else ""
+        )
+        print(f"Not ready to apply{hint}.")
+        return 5
+    print(f"Packet: {p.packet_path}")
+    return 0
+
+
+def _cmd_apply_done(args: argparse.Namespace) -> int:
+    from .apply import done
+
+    result = done(args.job, Path(args.record))
+    if isinstance(result, list):
+        _print_candidates(args.job, result)
+        return 1
+    status = (
+        "Moved to Applied." if result.moved_to_applied else "Status left as it was (already past Docs ready)."
+    )
+    print(f"{result.job.title} — {result.job.company}: {status}")
+    print(f"Note added to the job:\n{result.note}")
+    print(f"Record: {result.record_path}")
+    return 0
+
+
+def _cmd_apply_remember(args: argparse.Namespace) -> int:
+    from .apply import remember
+    from .db import StaleProfileError
+
+    try:
+        saved, version = remember(args.question, args.answer, replace=args.replace)
+    except StaleProfileError as e:
+        print(f"Not saved: {e}", file=sys.stderr)
+        return 1
+    if not saved:
+        print("That question already has a different saved answer; pass --replace to change it.")
+        return 1
+    print(f"Saved as profile version {version}.")
+    return 0
+
+
 def _cmd_cleanup(args: argparse.Namespace) -> int:
     from .cleanup import describe, run_cleanup
 
@@ -465,6 +535,23 @@ def build_parser() -> argparse.ArgumentParser:
     dg = sub.add_parser("digest", help="the morning digest email")
     dg.add_argument("--dry-run", action="store_true", help="print it and save a preview; send nothing")
     dg.set_defaults(func=_cmd_digest)
+
+    ap = sub.add_parser(
+        "apply", help="apply assist: packets and records for the /apply skill"
+    ).add_subparsers(dest="action", required=True)
+    apr = ap.add_parser("prepare", help="check a job and write its packet (files + answers)")
+    apr.add_argument("job", help="job id, the 8-character id from the job page, or words from the title")
+    apr.add_argument("--force", action="store_true", help="go ahead for a closed or already-applied job")
+    apr.set_defaults(func=_cmd_apply_prepare)
+    apd = ap.add_parser("done", help="after you submit: mark Applied, add a note, save the record")
+    apd.add_argument("job")
+    apd.add_argument("--record", required=True, help="JSON written by the /apply skill")
+    apd.set_defaults(func=_cmd_apply_done)
+    apm = ap.add_parser("remember", help="save an approved answer to a recurring question")
+    apm.add_argument("-q", "--question", required=True)
+    apm.add_argument("-a", "--answer", required=True)
+    apm.add_argument("--replace", action="store_true", help="replace a different saved answer")
+    apm.set_defaults(func=_cmd_apply_remember)
 
     cl = sub.add_parser("cleanup", help="delete old untouched jobs and finished jobs' files")
     cl.add_argument("--dry-run", action="store_true", help="list what would be removed; change nothing")

@@ -299,6 +299,8 @@ class DocumentRow(BaseModel):
     version: int
     state: str
     content: dict[str, Any]
+    pdf_path: str | None = None
+    docx_path: str | None = None
 
 
 class DecisionRow(BaseModel):
@@ -328,7 +330,7 @@ def latest_documents(job_id: str) -> dict[str, DocumentRow]:
     data = (
         client()
         .table("documents")
-        .select("id, kind, version, state, content")
+        .select("id, kind, version, state, content, pdf_path, docx_path")
         .eq("job_id", job_id)
         .order("version", desc=True)
         .execute()
@@ -501,3 +503,83 @@ def latest_signin_days_left() -> int | None:
     rows = _rows(data, RunRow)
     days = rows[0].counts.get("signin_days_left") if rows else None
     return int(days) if days is not None else None
+
+
+# ---------------------------------------------------------------------------
+# Apply assist (milestone 6)
+# ---------------------------------------------------------------------------
+
+
+class ApplyJobRow(BaseModel):
+    id: str
+    company: str
+    title: str
+    status: str
+    pipeline_state: str
+    source: str
+    source_board: str | None = None
+    source_job_id: str | None = None
+    url: str | None = None
+    location: str | None = None
+    closed_at: datetime | None = None
+    applied_at: datetime | None = None
+    dedupe_key: str | None = None
+
+
+_APPLY_COLUMNS = (
+    "id, company, title, status, pipeline_state, source, source_board, source_job_id, url, location, "
+    "closed_at, applied_at, dedupe_key"
+)
+
+
+def apply_candidates() -> list[ApplyJobRow]:
+    """Jobs Kojo might apply to or already has (the visible ones), best fit first."""
+    data = (
+        client()
+        .table("jobs")
+        .select(_APPLY_COLUMNS)
+        .or_(_VISIBLE)
+        .order("fit_score", desc=True)
+        .limit(2000)
+        .execute()
+        .data
+    )
+    return _rows(data, ApplyJobRow)
+
+
+class _DescriptionRow(BaseModel):
+    description: str | None = None
+
+
+def job_description(job_id: str) -> str | None:
+    data = client().table("jobs").select("description").eq("id", job_id).single().execute().data
+    return _DescriptionRow.model_validate(data).description
+
+
+def download_file(key: str) -> bytes:
+    return client().storage.from_(DOCUMENTS_BUCKET).download(key)
+
+
+def mark_applied(job_id: str) -> bool:
+    """Move the job to Applied, only from New or Docs ready (never backwards from Interviewing
+    and so on). The database stamps applied_at and the status history."""
+    data = (
+        client()
+        .table("jobs")
+        .update({"status": "applied"})
+        .eq("id", job_id)
+        .in_("status", ["new", "docs_ready"])
+        .execute()
+        .data
+    )
+    return bool(data)
+
+
+class _NotesRow(BaseModel):
+    notes: str = ""
+
+
+def append_job_note(job_id: str, text: str) -> None:
+    data = client().table("jobs").select("notes").eq("id", job_id).single().execute().data
+    notes = _NotesRow.model_validate(data).notes.rstrip()
+    client().table("jobs").update({"notes": f"{notes}\n\n{text}".strip()}).eq("id", job_id).execute()

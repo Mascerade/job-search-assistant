@@ -69,7 +69,8 @@ class SkillGroup(Strict):
 
 def normalize_question(question: str) -> str:
     """ "Are you 18 or older?" and "are you 18 or older" are the same question."""
-    return " ".join(re.sub(r"[^a-z0-9 ]+", " ", question.lower()).split())
+    no_apostrophes = re.sub(r"['’]", "", question.lower())  # "driver's" and "drivers" match
+    return " ".join(re.sub(r"[^a-z0-9 ]+", " ", no_apostrophes).split())
 
 
 class QA(Strict):
