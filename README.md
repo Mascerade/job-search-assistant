@@ -84,7 +84,7 @@ description (5+ years required, security clearance) are dropped with a reason yo
    ```bash
    npx supabase login
    npx supabase link --project-ref <your-project-ref>
-   npx supabase db push                     # applies supabase/migrations
+   npx supabase db push --remote            # applies supabase/migrations (without --remote it targets the local DB)
    ```
    In the dashboard → Authentication: turn **off** "Allow new users to sign up", and set the
    Site URL to your Vercel URL (also add it under Redirect URLs).
