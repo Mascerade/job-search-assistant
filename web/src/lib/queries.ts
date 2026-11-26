@@ -192,6 +192,14 @@ export function useProfileVersions() {
   })
 }
 
+/** The newest saved profile, read fresh (not from the cache) right before a save. */
+export async function fetchLatestProfile(): Promise<{ version: number; data: Record<string, unknown> } | null> {
+  const row = unwrapMaybe(
+    await supabase.from('profile_versions').select('version, data').order('version', { ascending: false }).limit(1).maybeSingle(),
+  )
+  return row ? { version: row.version, data: row.data as Record<string, unknown> } : null
+}
+
 /**
  * Saves a new profile version. `baseVersion` is the version the edit started from: if a newer
  * one was saved meanwhile (the daily run learns skills, apply assist saves answers), refuse

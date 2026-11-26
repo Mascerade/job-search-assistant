@@ -3,9 +3,9 @@
 A private, single-user tool that finds Boston-area jobs every day, writes a tailored resume and
 cover letter for each match, and tracks every application from "found" to "offer".
 
-> Status: **Milestone 5 of 6.** Daily job feed (72 employer boards + Adzuna), AI fit scoring,
-> tailored resumes + cover letters with an approval flow, and a morning digest email all work.
-> Next: apply assist (6).
+> Status: **All 6 milestones built.** Daily job feed (72 employer boards + Adzuna), AI fit scoring,
+> tailored resumes + cover letters with an approval flow, a morning digest email, and apply assist
+> (Claude fills an application in your Chrome and stops before Submit).
 
 ## How it fits together
 
@@ -168,6 +168,31 @@ Verification for the Google account, create an app password at myaccount.google.
 and add `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD` to `pipeline/.env.production` (optional:
 `DIGEST_TO` to send elsewhere, `SITE_URL` for the links).
 
+## Applying with Claude (apply assist)
+
+On a job's page, **Help me apply** shows whether it's ready (final documents, no pending
+suggestions, posting open) and the command to type in Claude Code on the Mac:
+
+```
+/apply 3f9a2c1e        # the job's id from the page, or words from the title: /apply formlabs embedded
+```
+
+1. `jobsearch apply prepare` checks the job and saves its final resume + cover letter and a
+   `packet.json` into `private/applications/<job>/` (gitignored; the lasting record of what was sent).
+2. Claude opens the application form in a new Chrome tab and fills it, page by page:
+   - your profile and the **Application answers** on the Profile page;
+   - the uploaded documents;
+   - drafts of essay answers, which you approve one by one in chat.
+3. It **stops before Submit** and shows a summary table and a screenshot. You submit, or reply
+   `submit`.
+4. `jobsearch apply done` marks the job Applied and adds a note (documents, essays). Demographic
+   answers are never recorded.
+
+**What Claude never does:** type passwords or create accounts (on Workday, you sign in first),
+solve CAPTCHAs, enter ID numbers, tick "I certify" boxes, or submit without your OK. The rules live
+in `.claude/skills/apply/SKILL.md`. `scripts/apply-sandbox/` is a fake form for testing the
+browser tools.
+
 ## Tests
 
 ```bash
@@ -186,4 +211,5 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 4. ✅ Tailored resume + cover letter with Claude Opus; fact checks; suggestions to approve/edit; Word + PDF
 5. ✅ Morning digest email (Gmail), Adzuna job-board search, cleanup, schedule heartbeat
    (HigherEdJobs blocks automated access; add its jobs with "Add job")
-6. Apply assist (optional): Claude fills application forms in your browser and stops before Submit for your review
+6. ✅ Apply assist: `/apply` in Claude Code fills the application in Chrome from your profile, saved answers,
+   and tailored documents, then stops before Submit for your review

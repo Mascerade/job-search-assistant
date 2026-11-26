@@ -2,6 +2,7 @@ import { Pencil, UserRound } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { parse, stringify } from 'yaml'
+import { ApplicationAnswersCard } from '@/components/ApplicationAnswersCard'
 import { EmptyState, PageHeader } from '@/components/EmptyState'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -159,6 +160,9 @@ export function ProfilePage() {
           create one here.
         </EmptyState>
       ) : (
+        <div className="flex flex-col gap-6">
+        {/* Remounts after each save, so it always starts from the newest version. */}
+        <ApplicationAnswersCard key={current!.version} profile={profile} version={current!.version} />
         <div className="grid gap-6 lg:grid-cols-[1fr_16rem]">
           <Card>
             <CardContent>
@@ -181,6 +185,7 @@ export function ProfilePage() {
               </ol>
             </CardContent>
           </Card>
+        </div>
         </div>
       )}
     </>

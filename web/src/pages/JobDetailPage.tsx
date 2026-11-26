@@ -30,6 +30,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { FitScore } from '@/components/FitScore'
 import { JobForm } from '@/components/JobForm'
 import { EMPTY_JOB_FORM, toJobInsert, type JobFormValues } from '@/lib/jobForm'
+import { HelpMeApplyDialog } from '@/components/HelpMeApplyDialog'
 import { MoveToMenu } from '@/components/MoveToMenu'
 import { StartTags } from '@/components/StartDate'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -52,6 +53,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { formatDateTime, formatRelative, formatSalary } from '@/lib/format'
 import { useDeleteJob, useJob, useLatestScore, useStatusHistory, useUpdateJob } from '@/lib/queries'
 import { sourceLabel, TAG_COLOR, TAG_LABEL } from '@/lib/jobs'
+import { canApply } from '@/lib/apply'
 import { STATUS } from '@/lib/status'
 import { formatDay, startWindowLabel, termEndsSoon, useAvailableFrom } from '@/lib/timing'
 import type { Contact, Job } from '@/lib/types'
@@ -427,8 +429,9 @@ export function JobDetailPage() {
           )}
         </dl>
         <div className="mt-5 flex flex-wrap gap-2">
+          {canApply(job) && <HelpMeApplyDialog job={job} />}
           {job.url && (
-            <Button asChild>
+            <Button asChild variant={canApply(job) ? 'outline' : 'default'}>
               <a href={job.url} target="_blank" rel="noopener noreferrer">
                 <ExternalLink data-icon="inline-start" />
                 Open posting
