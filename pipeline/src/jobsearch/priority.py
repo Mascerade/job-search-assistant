@@ -2,7 +2,8 @@
 
 Order, best fit first within each group:
 
-  1. Postings tied to a future start (a "2027 new grad" program): the timing fits exactly.
+  1. Postings whose stated start window reaches Settings.available_from (a "Summer 2027 new
+     grad" program): the timing fits exactly. Most postings don't say; see timing.py.
   2. Until Settings.focus_until (default March 1, 2027):
        software → hybrid (university tech) → program admin.
      Software employers hire new grads months ahead; university and nonprofit admin roles
@@ -17,7 +18,8 @@ from __future__ import annotations
 
 from datetime import date
 
-from .models import FUTURE_START_TAG, STAFFING_AGENCY_TAG, JobForScoring, Settings
+from .models import STAFFING_AGENCY_TAG, JobForScoring, Settings
+from .timing import starts_in_time
 
 FOCUS_TRACK_RANK = {"software": 1, "hybrid": 2, "program_admin": 3}
 
@@ -35,7 +37,8 @@ def tailoring_order(
 
     def rank(j: JobForScoring) -> tuple[bool, int]:
         agency = STAFFING_AGENCY_TAG in j.tags
-        right_timing = FUTURE_START_TAG in j.tags or not focus
+        in_time = starts_in_time(j.start_kind, j.start_from, j.start_to, settings.available_from)
+        right_timing = in_time or not focus
         return (agency, 0 if right_timing else FOCUS_TRACK_RANK.get(j.track or "", 2))
 
     return sorted(jobs, key=rank)  # sorted() is stable: best fit first within each group

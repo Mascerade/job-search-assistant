@@ -19,7 +19,9 @@ from supabase import Client, create_client
 from .config import load_config
 from .models import JobForScoring, JobRow, Settings
 
-RunKind = Literal["daily", "local", "scoring", "tailoring", "tasks", "digest", "cleanup", "on_demand"]
+RunKind = Literal[
+    "daily", "local", "scoring", "timing", "tailoring", "tasks", "digest", "cleanup", "on_demand"
+]
 RunStatus = Literal["running", "succeeded", "failed"]
 
 
@@ -173,8 +175,10 @@ def close_missing(board_key: str, seen_ids: list[str]) -> int:
 # ---------------------------------------------------------------------------
 
 _SCORING_COLUMNS = (
-    "id, company, title, location, remote_type, employment_type, salary_min, salary_max, track, description"
+    "id, company, title, location, remote_type, employment_type, salary_min, salary_max, track, description, "
+    "posted_at, first_seen_at"
 )
+_START_COLUMNS = "start_kind, start_from, start_to"
 
 
 def jobs_to_score(limit: int | None = None) -> list[JobForScoring]:
@@ -195,6 +199,31 @@ def jobs_to_score(limit: int | None = None) -> list[JobForScoring]:
 
 def record_scores(rows: list[dict[str, Any]]) -> int:
     resp = client().rpc("record_scores", {"scores": rows}).execute()
+    return TypeAdapter(int).validate_python(resp.data)
+
+
+# Jobs the website shows: matches, and anything Kojo has acted on or added by hand.
+_VISIBLE = "pipeline_state.in.(scored,needs_approval,tailoring,ready),status.neq.new,source.eq.manual"
+
+
+def jobs_missing_start(limit: int | None = None) -> list[JobForScoring]:
+    """Open, visible jobs whose start window hasn't been read yet (scored before timing.py)."""
+    query = (
+        client()
+        .table("jobs")
+        .select(_SCORING_COLUMNS)
+        .is_("start_kind", "null")
+        .is_("closed_at", "null")
+        .or_(_VISIBLE)
+        .order("fit_score", desc=True)
+    )
+    if limit is not None:
+        query = query.limit(limit)
+    return _rows(query.execute().data, JobForScoring)
+
+
+def record_timing(rows: list[dict[str, Any]]) -> int:
+    resp = client().rpc("record_timing", {"timings": rows}).execute()
     return TypeAdapter(int).validate_python(resp.data)
 
 
@@ -346,7 +375,7 @@ def jobs_to_tailor() -> list[JobForScoring]:
     data = (
         client()
         .table("jobs")
-        .select(_SCORING_COLUMNS + ", tags")
+        .select(f"{_SCORING_COLUMNS}, tags, {_START_COLUMNS}")
         .eq("pipeline_state", "scored")
         .eq("status", "new")
         .is_("closed_at", "null")

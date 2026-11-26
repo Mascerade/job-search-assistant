@@ -3,6 +3,7 @@
 Commands:
   jobsearch daily [--dry-run] [--where cloud|local] fetch job boards, filter, and save
   jobsearch score [--dry-run] [--limit N]          AI fit scores for jobs waiting to be scored
+  jobsearch timing [--dry-run] [--limit N]         read start dates for jobs scored before they were read
   jobsearch tailor [--job ID] [--limit N]           tailored resume + cover letter (best matches first)
   jobsearch render --job ID                        rebuild a job's PDFs after you approve suggestions
   jobsearch tasks                                  handle queued button presses from the website, once
@@ -37,6 +38,7 @@ from .profile import Profile, load_profile, profile_from_data
 if TYPE_CHECKING:
     from .documents import TailoringSummary
     from .scoring import ScoringSummary
+    from .timing import TimingSummary
 
 DEFAULT_PROFILE = REPO_DIR / "private" / "profile.yaml"
 
@@ -160,6 +162,32 @@ def _cmd_score(args: argparse.Namespace) -> int:
     return 1 if s.failed and not s.scored else 0
 
 
+def _print_timing(t: TimingSummary, *, show: int = 0) -> None:
+    if not t.checked and not t.failed:
+        return  # nothing was missing: no AI call
+    print(
+        f"Start dates read for {t.checked} jobs: {t.stated} name a start window ({t.in_time} after you're "
+        f"available), {t.terms} fixed-term, {t.failed} failed (estimated API value ${t.cost_usd:.3f})"
+    )
+    for err in t.errors:
+        print(f"  ! {err}", file=sys.stderr)
+    for job, s in t.items[:show]:
+        window = "–".join(d.isoformat() for d in (s.earliest, s.latest) if d) or s.kind
+        term = f", term ends {s.term_end}" if s.term_end else ""
+        note = f"  ({s.note})" if s.note else ""
+        print(f"  {window}{term} · {job.title} — {job.company}{note}")
+
+
+def _cmd_timing(args: argparse.Namespace) -> int:
+    from .timing import run_timing
+
+    t = run_timing(limit=args.limit, model=args.model, dry_run=args.dry_run)
+    if not t.checked and not t.failed:
+        print("Every visible job already has its start date read.")
+    _print_timing(t, show=args.show if args.dry_run else 0)
+    return 1 if t.failed and not t.checked else 0
+
+
 def _cmd_local_daily(args: argparse.Namespace) -> int:
     from .daily import run_daily
     from .scoring import run_scoring
@@ -172,6 +200,14 @@ def _cmd_local_daily(args: argparse.Namespace) -> int:
         print(f"  ! {err}", file=sys.stderr)
     s = run_scoring(model=args.model)
     _print_scoring(s)
+    from .timing import run_timing
+
+    try:  # safety net for jobs scored before start dates were read; never blocks the rest
+        _print_timing(run_timing())
+    except AuthExpiredError:
+        raise
+    except Exception as e:  # noqa: BLE001
+        print(f"Start dates skipped: {e}"[:300], file=sys.stderr)
     from . import db
     from .documents import process_tasks, run_tailoring
 
@@ -396,6 +432,13 @@ def build_parser() -> argparse.ArgumentParser:
     score.add_argument("--model", default="sonnet", help="Claude model alias (default: sonnet)")
     score.add_argument("--show", type=int, default=20, help="how many results to print in a dry run")
     score.set_defaults(func=_cmd_score)
+
+    tm = sub.add_parser("timing", help="read start dates for jobs scored before they were read")
+    tm.add_argument("--dry-run", action="store_true", help="read and print, but save nothing")
+    tm.add_argument("--limit", type=int, help="read at most this many jobs")
+    tm.add_argument("--model", default="haiku", help="Claude model alias (default: haiku)")
+    tm.add_argument("--show", type=int, default=30, help="how many results to print in a dry run")
+    tm.set_defaults(func=_cmd_timing)
 
     local = sub.add_parser("local-daily", help="the Mac's daily job: Workday boards, then scoring")
     local.add_argument("--model", default="sonnet", help="Claude model alias for scoring")

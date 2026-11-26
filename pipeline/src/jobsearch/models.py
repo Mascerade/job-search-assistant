@@ -81,8 +81,6 @@ class Posting(BaseModel):
 
 # Tag on postings from staffing / recruiting agencies (see config/staffing_agencies.yaml).
 STAFFING_AGENCY_TAG = "staffing-agency"
-# Tag on postings tied to a future start, e.g. a 2027 new-grad program (set by scoring).
-FUTURE_START_TAG = "future-start"
 
 
 class JobForScoring(BaseModel):
@@ -96,7 +94,19 @@ class JobForScoring(BaseModel):
     salary_max: int | None = None
     track: Track | None = None
     description: str | None = None
-    tags: list[str] = Field(default_factory=list)  # read for tailoring order; not sent to the AI
+    posted_at: datetime | None = None
+    first_seen_at: datetime | None = None
+    # Read for the tailoring order; not sent to the AI.
+    tags: list[str] = Field(default_factory=list)
+    start_kind: str | None = None  # the start window (see timing.py); None = not read yet
+    start_from: date | None = None
+    start_to: date | None = None
+
+    @property
+    def posted_on(self) -> date | None:
+        """When the job was posted (or first seen), so the AI can place "this fall"."""
+        when = self.posted_at or self.first_seen_at
+        return when.date() if when else None
 
 
 class TrackSettings(BaseModel):
@@ -120,6 +130,9 @@ class Settings(BaseModel):
     # priority.py): university admin roles hire weeks before the start date, and Kojo can't
     # start until after graduating in May 2027. None = always plain best fit first.
     focus_until: date | None = date(2027, 3, 1)
+    # The first day Kojo can start a job (after graduating in May 2027). The website's Start
+    # column and the tailoring order compare each posting's start window against it.
+    available_from: date = date(2027, 6, 1)
     experience_max_years: int = 2
     full_time_only: bool = True
     exclude_clearance: bool = True

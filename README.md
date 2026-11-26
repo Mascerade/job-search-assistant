@@ -50,8 +50,14 @@ cover letter for each match, and tracks every application from "found" to "offer
   Definitions live in `web/src/lib/insights.ts` (Today's headline numbers use the same ones).
 - **Timing focus.** Until a date in Settings (default March 1, 2027) the daily 20 documents go to
   software, then university tech, then program admin: admin roles usually hire weeks before the
-  start date, and the start has to be after graduation. Postings with a future start date (a
-  "2027 new grad" program) jump the line; staffing agencies always go last (`priority.py`).
+  start date, and the start has to be after graduation. Postings whose start window reaches
+  "Available from" in Settings (a "June 2027 new grads" program) jump the line; staffing agencies
+  always go last (`priority.py`).
+- **Start dates.** While scoring, the AI also reads when each job starts: a stated window, "immediately",
+  or not stated (most postings), plus the end date of fixed-term appointments (`timing.py`). Timing
+  details sit late in long postings, so scoring adds those sentences after its usual excerpt.
+  `uv run jobsearch timing` fills in jobs scored before this existed; the Mac's daily run calls it
+  too, and it makes no AI call when nothing is missing.
 
 ## Run it locally
 

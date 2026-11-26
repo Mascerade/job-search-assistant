@@ -1,6 +1,6 @@
 -- Tests for record_scores. Run with: npx supabase test db
 begin;
-select plan(11);
+select plan(16);
 
 insert into public.jobs (id, company, title, pipeline_state, tags) values
   ('dddddddd-0000-0000-0000-000000000001', 'Acme', 'Program Coordinator', 'new', array['location-unclear']),
@@ -33,8 +33,37 @@ select is((select pipeline_state::text from public.jobs where id = 'dddddddd-000
 update public.settings set data = jsonb_set(data, '{fit_threshold}', '90') where id = 1;
 select is((select pipeline_state::text from public.jobs where id = 'dddddddd-0000-0000-0000-000000000001'), 'below_threshold', 'higher threshold → hidden');
 
+-- Start windows (timing.py): copied from a score that carries one, or saved by record_timing
+select is(
+  public.record_scores('[
+    {"job_id":"dddddddd-0000-0000-0000-000000000002","score":45,"reason":"Rescored","keep":false,"model":"m",
+     "start":{"kind":"date","earliest":"2027-06-01","latest":"2027-08-31","term_end":null,"note":"Summer 2027 cohort"}}
+  ]'::jsonb),
+  1, 'a score with a start window is saved'
+);
+select is(
+  (select row(start_kind, start_from, start_to, term_end, start_note)::text from public.jobs
+    where id = 'dddddddd-0000-0000-0000-000000000002'),
+  row('date', '2027-06-01'::date, '2027-08-31'::date, null::date, 'Summer 2027 cohort')::text,
+  'the start window is copied onto the job'
+);
+select is(
+  public.record_timing('[
+    {"job_id":"dddddddd-0000-0000-0000-000000000003",
+     "start":{"kind":"unstated","earliest":null,"latest":null,"term_end":"2027-06-30","note":""}}
+  ]'::jsonb),
+  1, 'record_timing saves a start window'
+);
+select is(
+  (select row(start_kind, start_from, term_end, start_note)::text from public.jobs
+    where id = 'dddddddd-0000-0000-0000-000000000003'),
+  row('unstated', null::date, '2027-06-30'::date, null::text)::text,
+  'a term end date is kept even when the start is unstated; an empty note is stored as null'
+);
+
 set local role authenticated;
 select throws_ok($$ select public.record_scores('[]'::jsonb) $$, '42501', null, 'signed-in users cannot write scores');
+select throws_ok($$ select public.record_timing('[]'::jsonb) $$, '42501', null, 'signed-in users cannot write start dates');
 
 select * from finish();
 rollback;
