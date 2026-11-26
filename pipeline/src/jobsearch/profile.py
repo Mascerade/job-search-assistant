@@ -4,6 +4,9 @@ Every resume bullet the AI writes must cite the `id` of the fact(s) it came from
 Anything it can't cite becomes a *suggestion* that Kojo approves or rejects.
 
 The website's validator (web/src/lib/profile.ts) mirrors these rules.
+
+`application` holds Kojo's standard answers for job application forms (apply assist,
+milestone 6). It is only used to fill forms: never sent to the AI that scores or writes.
 """
 
 from __future__ import annotations
@@ -64,6 +67,71 @@ class SkillGroup(Strict):
     items: list[str]
 
 
+def normalize_question(question: str) -> str:
+    """ "Are you 18 or older?" and "are you 18 or older" are the same question."""
+    return " ".join(re.sub(r"[^a-z0-9 ]+", " ", question.lower()).split())
+
+
+class QA(Strict):
+    """A recurring application question and the answer Kojo approved for it."""
+
+    question: str = Field(min_length=1)
+    answer: str = Field(min_length=1)
+
+
+class Demographics(Strict):
+    """Kojo's choices for voluntary self-identification questions (may be "Decline to self-identify")."""
+
+    gender: str | None = None
+    race_ethnicity: str | None = None
+    hispanic_latino: str | None = None
+    veteran: str | None = None
+    disability: str | None = None
+
+
+class ApplicationLinks(Strict):
+    """Overrides for links that forms ask for by name; defaults come from contact.links."""
+
+    linkedin: str | None = None
+    github: str | None = None
+    website: str | None = None
+    portfolio: str | None = None
+
+
+class ApplicationAnswers(Strict):
+    """Standard answers for application forms. None means "ask Kojo on each form"."""
+
+    # YAML reads `gpa: 3.7` or `salary_expectation: 85000` as numbers; keep them as text.
+    model_config = ConfigDict(extra="forbid", coerce_numbers_to_str=True)
+
+    work_authorized_us: bool | None = None
+    sponsorship_now: bool | None = None
+    sponsorship_future: bool | None = None
+    over_18: bool | None = None
+    preferred_name: str | None = None
+    pronouns: str | None = None
+    address: str | None = None
+    gpa: str | None = None
+    salary_expectation: str | None = None
+    willing_to_relocate: bool | None = None
+    how_heard: str | None = None
+    links: ApplicationLinks = Field(default_factory=ApplicationLinks)
+    demographics: Demographics = Field(default_factory=Demographics)
+    custom: list[QA] = []
+
+    @model_validator(mode="after")
+    def _one_answer_per_question(self) -> ApplicationAnswers:
+        latest: dict[str, QA] = {}
+        for qa in self.custom:  # a later answer to the same question wins
+            latest[normalize_question(qa.question)] = qa
+        self.custom = list(latest.values())
+        return self
+
+    def answer_for(self, question: str) -> str | None:
+        key = normalize_question(question)
+        return next((qa.answer for qa in self.custom if normalize_question(qa.question) == key), None)
+
+
 class Profile(Strict):
     contact: Contact
     summaries: dict[str, str] = {}
@@ -74,6 +142,7 @@ class Profile(Strict):
     certifications: list[str] = []
     extra_facts: list[Fact] = []
     declined_skills: list[str] = []  # skills Kojo said no to; never suggested again
+    application: ApplicationAnswers | None = None  # apply assist only; never sent to the AI
 
     @model_validator(mode="after")
     def _check_facts(self) -> Profile:
@@ -119,6 +188,19 @@ class Profile(Strict):
     def decline_skill(self, skill: str) -> None:
         if skill.lower() not in {s.lower() for s in self.declined_skills}:
             self.declined_skills.append(skill)
+
+    def remember_answer(self, question: str, answer: str, *, replace: bool = False) -> bool:
+        """Save a recurring question's answer. Returns False if the question already has a
+        different answer and `replace` is off."""
+        answers = self.application or ApplicationAnswers()
+        existing = answers.answer_for(question)
+        if existing is not None and existing != answer and not replace:
+            return False
+        key = normalize_question(question)
+        custom = [qa for qa in answers.custom if normalize_question(qa.question) != key]
+        custom.append(QA(question=question.strip(), answer=answer.strip()))
+        self.application = answers.model_copy(update={"custom": custom})
+        return True
 
 
 def load_profile(path: Path) -> Profile:

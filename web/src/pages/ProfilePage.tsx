@@ -63,6 +63,7 @@ export function ProfilePage() {
   const [text, setText] = useState('')
   const [note, setNote] = useState('')
   const [errors, setErrors] = useState<string[]>([])
+  const [baseVersion, setBaseVersion] = useState<number | undefined>(undefined)
 
   const profile = useMemo(() => (current ? (current.data as unknown as Profile) : null), [current])
 
@@ -70,6 +71,7 @@ export function ProfilePage() {
     setText(profile ? stringify(canonicalProfile(profile), { lineWidth: 0 }) : '')
     setNote('')
     setErrors([])
+    setBaseVersion(current?.version)
     setEditing(true)
   }
 
@@ -85,7 +87,7 @@ export function ProfilePage() {
     setErrors(problems)
     if (problems.length) return
     try {
-      await save.mutateAsync({ data: parsed as Record<string, unknown>, note: note.trim() })
+      await save.mutateAsync({ data: parsed as Record<string, unknown>, note: note.trim(), baseVersion })
       toast.success('Profile saved as a new version')
       setEditing(false)
     } catch (e) {

@@ -24,3 +24,15 @@ projects:
 skills:
   - category: Languages
     items: [Python, TypeScript]
+application:  # fake answers for tests
+  work_authorized_us: true
+  sponsorship_now: false
+  sponsorship_future: false
+  how_heard: Company careers site
+  links:
+    portfolio: alexexample.dev/work
+  demographics:
+    gender: Decline to self-identify
+  custom:
+    - question: Are you open to hybrid work?
+      answer: Yes, three days a week on site works for me.

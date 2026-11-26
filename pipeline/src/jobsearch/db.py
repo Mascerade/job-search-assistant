@@ -114,7 +114,20 @@ def latest_profile() -> ProfileVersionRow | None:
     return rows[0] if rows else None
 
 
-def insert_profile(data: dict[str, Any], note: str) -> int:
+class StaleProfileError(Exception):
+    """A newer profile version was saved after the one these changes started from."""
+
+
+def insert_profile(data: dict[str, Any], note: str, *, base_version: int | None = None) -> int:
+    """Save a new profile version. With `base_version`, refuse if someone (the website, the
+    daily run) saved a newer version in the meantime, so their changes aren't overwritten."""
+    if base_version is not None:
+        latest = latest_profile()
+        if latest is not None and latest.version != base_version:
+            raise StaleProfileError(
+                f"profile changed since version {base_version} (now version {latest.version}); "
+                "reload and retry"
+            )
     resp = client().table("profile_versions").insert({"data": data, "note": note}).execute()
     return _first(resp.data, _VersionRow).version
 

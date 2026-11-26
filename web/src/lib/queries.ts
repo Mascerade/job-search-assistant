@@ -192,17 +192,33 @@ export function useProfileVersions() {
   })
 }
 
+/**
+ * Saves a new profile version. `baseVersion` is the version the edit started from: if a newer
+ * one was saved meanwhile (the daily run learns skills, apply assist saves answers), refuse
+ * instead of silently overwriting it.
+ */
 export function useSaveProfile() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ data, note }: { data: Record<string, unknown>; note: string }) =>
-      unwrap(
+    mutationFn: async ({ data, note, baseVersion }: { data: Record<string, unknown>; note: string; baseVersion?: number }) => {
+      if (baseVersion !== undefined) {
+        const latest = unwrapMaybe(
+          await supabase.from('profile_versions').select('version').order('version', { ascending: false }).limit(1).maybeSingle(),
+        )
+        if (latest && latest.version !== baseVersion) {
+          throw new Error(
+            `your profile changed since you opened it (now version ${latest.version}). Copy your edits, reload, and try again.`,
+          )
+        }
+      }
+      return unwrap(
         await supabase
           .from('profile_versions')
           .insert({ data: data as JsonObject, note })
           .select('*')
           .single(),
-      ),
+      )
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.profile }),
   })
 }

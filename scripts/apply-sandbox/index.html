@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apply sandbox</title>
+<style>
+  /* A fake job application for testing apply assist (milestone 6). It copies the tricky parts of
+     real forms: a React-style controlled input, a hidden file input behind a custom button, a
+     location typeahead, a select, two pages, and a Submit that only records what it would send. */
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 640px; margin: 32px auto; padding: 0 16px; color: #222; }
+  label { display: block; margin-top: 14px; font-weight: 600; }
+  input, select, textarea { width: 100%; padding: 8px; font: inherit; border: 1px solid #888; border-radius: 6px; box-sizing: border-box; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  button { padding: 8px 14px; font: inherit; border-radius: 6px; border: 1px solid #555; background: #fff; cursor: pointer; }
+  button.primary { background: #1a6fc9; color: #fff; border-color: #1a6fc9; }
+  .hint { color: #555; font-size: 13px; }
+  .chip { display: inline-block; background: #d3e5ef; padding: 2px 8px; border-radius: 4px; margin-top: 6px; }
+  #suggestions div { padding: 6px 8px; border: 1px solid #ccc; border-top: 0; cursor: pointer; }
+  #suggestions div:hover { background: #eee; }
+  .page { display: none; } .page.on { display: block; }
+  pre { background: #f4f4f4; padding: 12px; border-radius: 6px; white-space: pre-wrap; }
+  .error { color: #b00020; font-size: 13px; }
+</style>
+</head>
+<body>
+<h1>Software Engineer, New Grad — Sandbox Co.</h1>
+<p class="hint">Test form for apply assist. Nothing leaves this page.</p>
+
+<form id="app" novalidate>
+  <div class="page on" data-page="1">
+    <h2>Page 1 of 2: About you</h2>
+    <label for="resume-button">Resume/CV *</label>
+    <div class="row">
+      <button type="button" id="resume-button">Attach</button>
+      <span id="resume-name" class="hint">No file chosen</span>
+    </div>
+    <input type="file" id="resume" name="resume" accept=".pdf,.doc,.docx" style="display:none">
+
+    <label for="first">First name *</label>
+    <input id="first" name="first_name" autocomplete="off">
+
+    <label for="last">Last name * <span class="hint">(controlled: reverts unless a real input event fires)</span></label>
+    <input id="last" name="last_name" autocomplete="off">
+    <div class="hint">Stored value: <span id="last-state">(empty)</span></div>
+
+    <label for="email">Email *</label>
+    <input id="email" name="email" type="email">
+
+    <label for="location">Location * <span class="hint">(type, then pick a suggestion)</span></label>
+    <input id="location" autocomplete="off" placeholder="Start typing a city">
+    <div id="suggestions"></div>
+    <div id="location-chip"></div>
+
+    <label for="hidden-trap" style="display:none">Leave empty</label>
+    <input id="hidden-trap" name="website_url_hp" style="display:none" tabindex="-1">
+
+    <p id="page1-error" class="error"></p>
+    <button type="button" class="primary" id="next">Next</button>
+  </div>
+
+  <div class="page" data-page="2">
+    <h2>Page 2 of 2: Questions</h2>
+    <label for="auth">Are you legally authorized to work in the United States? *</label>
+    <select id="auth" name="work_authorized">
+      <option value="">Select…</option>
+      <option>Yes</option>
+      <option>No</option>
+    </select>
+
+    <label for="why">Why do you want to work at Sandbox Co.? *</label>
+    <textarea id="why" name="why" rows="4"></textarea>
+
+    <label><input type="checkbox" id="attest" name="attest" style="width:auto"> I certify the information above is true.</label>
+
+    <p id="page2-error" class="error"></p>
+    <div class="row">
+      <button type="button" id="back">Back</button>
+      <button type="submit" class="primary" id="submit">Submit application</button>
+    </div>
+  </div>
+</form>
+
+<h2>What would be sent</h2>
+<pre id="out">(not submitted)</pre>
+
+<script>
+  // React-style controlled input: the stored value only changes on a real input event, and the
+  // field is re-rendered from the stored value, so setting .value directly doesn't stick.
+  const last = document.getElementById('last');
+  let lastState = '';
+  last.addEventListener('input', (e) => { lastState = e.target.value; document.getElementById('last-state').textContent = lastState || '(empty)'; });
+  setInterval(() => { if (last.value !== lastState) last.value = lastState; }, 150);
+
+  // Hidden file input behind a custom button
+  const file = document.getElementById('resume');
+  document.getElementById('resume-button').addEventListener('click', () => file.click());
+  file.addEventListener('change', () => {
+    const f = file.files[0];
+    document.getElementById('resume-name').textContent = f ? `${f.name} (${f.size} bytes)` : 'No file chosen';
+  });
+
+  // Location typeahead: the value only counts once a suggestion is picked
+  const CITIES = ['Boston, MA', 'Cambridge, MA', 'Somerville, MA', 'New York, NY', 'Bozeman, MT'];
+  const loc = document.getElementById('location');
+  const sug = document.getElementById('suggestions');
+  let locationPicked = '';
+  loc.addEventListener('input', () => {
+    locationPicked = '';
+    document.getElementById('location-chip').innerHTML = '';
+    const q = loc.value.trim().toLowerCase();
+    sug.innerHTML = '';
+    if (!q) return;
+    setTimeout(() => {
+      for (const c of CITIES.filter((c) => c.toLowerCase().startsWith(q))) {
+        const d = document.createElement('div');
+        d.textContent = c;
+        d.setAttribute('role', 'option');
+        d.addEventListener('click', () => {
+          locationPicked = c; loc.value = c; sug.innerHTML = '';
+          document.getElementById('location-chip').innerHTML = `<span class="chip">${c}</span>`;
+        });
+        sug.appendChild(d);
+      }
+    }, 300);
+  });
+
+  const show = (n) => document.querySelectorAll('.page').forEach((p) => p.classList.toggle('on', p.dataset.page === String(n)));
+  document.getElementById('next').addEventListener('click', () => {
+    const missing = [];
+    if (!file.files[0]) missing.push('resume');
+    if (!document.getElementById('first').value) missing.push('first name');
+    if (!lastState) missing.push('last name');
+    if (!document.getElementById('email').value) missing.push('email');
+    if (!locationPicked) missing.push('location (pick a suggestion)');
+    document.getElementById('page1-error').textContent = missing.length ? 'Missing: ' + missing.join(', ') : '';
+    if (!missing.length) show(2);
+  });
+  document.getElementById('back').addEventListener('click', () => show(1));
+  document.getElementById('app').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = file.files[0];
+    document.getElementById('out').textContent = JSON.stringify({
+      resume: f ? { name: f.name, size: f.size } : null,
+      first_name: document.getElementById('first').value,
+      last_name: lastState,
+      email: document.getElementById('email').value,
+      location: locationPicked,
+      work_authorized: document.getElementById('auth').value,
+      why: document.getElementById('why').value,
+      attest: document.getElementById('attest').checked,
+      hidden_trap: document.getElementById('hidden-trap').value,
+    }, null, 2);
+  });
+</script>
+</body>
+</html>
