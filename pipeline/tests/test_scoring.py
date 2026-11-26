@@ -63,8 +63,10 @@ def test_non_json_output_raises() -> None:
         ClaudeCode()._parse(completed("Segmentation fault", code=139))
 
 
-def test_command_strips_tools_and_settings() -> None:
+def test_command_strips_tools_and_settings(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("CLAUDE_BIN", "/opt/claude")  # CI machines don't have Claude Code installed
     cmd = ClaudeCode(model="haiku").command("sys", {"type": "object"})
+    assert cmd[0] == "/opt/claude"
     for flag in ("-p", "--strict-mcp-config", "--disable-slash-commands", "--no-session-persistence"):
         assert flag in cmd
     assert cmd[cmd.index("--tools") + 1] == ""
