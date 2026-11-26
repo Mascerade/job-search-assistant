@@ -1,25 +1,22 @@
 /*
- * Theme for the Job Search Assistant.
- * Source of truth: design-system/job-search-assistant/MASTER.md (UI/UX Pro Max),
- * including its "Project Adaptations" section. Every text/background pair below was
- * checked for >= 4.5:1 contrast (input borders >= 3:1).
+ * Theme for the Job Search Assistant: Notion-inspired restyle (2026-11-27).
+ * Source of truth: design-system/job-search-assistant/MASTER.md ("Notion-inspired restyle")
+ * and the approved Figma mockups ("Job Search Assistant — redesign"; the Color variables
+ * there carry the same names as these CSS variables).
+ * Every text/background pair was checked for >= 4.5:1 contrast (input borders >= 3:1);
+ * chart colors are the dataviz reference palette validated against #FFFFFF / #191919.
  */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource/fira-sans/400.css";
-@import "@fontsource/fira-sans/500.css";
-@import "@fontsource/fira-sans/600.css";
-@import "@fontsource/fira-sans/700.css";
-@import "@fontsource/fira-code/400.css";
-@import "@fontsource/fira-code/500.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: 'Fira Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-heading: 'Fira Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Fira Code', ui-monospace, monospace;
+  /* The device's own UI font (SF Pro on Apple devices, Segoe UI on Windows), like Notion. */
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-heading: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -46,101 +43,147 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Application status colors (always paired with an icon + label in the UI) */
-  --color-status-new: var(--status-new);
-  --color-status-new-bg: var(--status-new-bg);
-  --color-status-docs-ready: var(--status-docs-ready);
-  --color-status-docs-ready-bg: var(--status-docs-ready-bg);
-  --color-status-applied: var(--status-applied);
-  --color-status-applied-bg: var(--status-applied-bg);
-  --color-status-interviewing: var(--status-interviewing);
-  --color-status-interviewing-bg: var(--status-interviewing-bg);
-  --color-status-offer: var(--status-offer);
-  --color-status-offer-bg: var(--status-offer-bg);
-  --color-status-rejected: var(--status-rejected);
-  --color-status-rejected-bg: var(--status-rejected-bg);
-  --color-status-closed: var(--status-closed);
-  --color-status-closed-bg: var(--status-closed-bg);
+  /* Notion-style surfaces */
+  --color-sidebar: var(--sidebar);
+  --color-hover: var(--hover);
+  --color-hover-strong: var(--hover-strong);
 
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  /* Pastel tags (select-property colors). Always paired with a text label. */
+  --color-tag-gray-bg: var(--tag-gray-bg);       --color-tag-gray-fg: var(--tag-gray-fg);
+  --color-tag-brown-bg: var(--tag-brown-bg);     --color-tag-brown-fg: var(--tag-brown-fg);
+  --color-tag-orange-bg: var(--tag-orange-bg);   --color-tag-orange-fg: var(--tag-orange-fg);
+  --color-tag-yellow-bg: var(--tag-yellow-bg);   --color-tag-yellow-fg: var(--tag-yellow-fg);
+  --color-tag-green-bg: var(--tag-green-bg);     --color-tag-green-fg: var(--tag-green-fg);
+  --color-tag-blue-bg: var(--tag-blue-bg);       --color-tag-blue-fg: var(--tag-blue-fg);
+  --color-tag-purple-bg: var(--tag-purple-bg);   --color-tag-purple-fg: var(--tag-purple-fg);
+  --color-tag-pink-bg: var(--tag-pink-bg);       --color-tag-pink-fg: var(--tag-pink-fg);
+  --color-tag-red-bg: var(--tag-red-bg);         --color-tag-red-fg: var(--tag-red-fg);
+
+  /* Application status colors = tag colors (always with an icon + label in the UI) */
+  --color-status-new: var(--tag-gray-fg);              --color-status-new-bg: var(--tag-gray-bg);
+  --color-status-docs-ready: var(--tag-purple-fg);     --color-status-docs-ready-bg: var(--tag-purple-bg);
+  --color-status-applied: var(--tag-blue-fg);          --color-status-applied-bg: var(--tag-blue-bg);
+  --color-status-interviewing: var(--tag-orange-fg);   --color-status-interviewing-bg: var(--tag-orange-bg);
+  --color-status-offer: var(--tag-green-fg);           --color-status-offer-bg: var(--tag-green-bg);
+  --color-status-rejected: var(--tag-red-fg);          --color-status-rejected-bg: var(--tag-red-bg);
+  --color-status-closed: var(--tag-brown-fg);          --color-status-closed-bg: var(--tag-brown-bg);
+
+  /* Charts (dataviz reference palette). Series: 1 software, 2 university tech, 3 program admin. */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-baseline: var(--chart-baseline);
+  --color-chart-muted: var(--chart-muted);
+  --color-chart-soft: var(--chart-soft);
+
+  --radius-sm: calc(var(--radius) * 0.66);
+  --radius-md: calc(var(--radius) * 0.83);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-xl: calc(var(--radius) * 1.34);
+  --radius-2xl: calc(var(--radius) * 1.67);
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.375rem; /* 6px */
 
-  --background: #F0F9FF;
-  --foreground: #0C4A6E;
+  --background: #FFFFFF;
+  --foreground: #37352F;
   --card: #FFFFFF;
-  --card-foreground: #0C4A6E;
+  --card-foreground: #37352F;
   --popover: #FFFFFF;
-  --popover-foreground: #0C4A6E;
-  --primary: #0369A1;
+  --popover-foreground: #37352F;
+  --primary: #1A6FC9;            /* white text 5.05:1 */
   --primary-foreground: #FFFFFF;
-  /* shadcn "secondary" = soft button fill; the design system's bright secondary
-     (#0EA5E9) is exposed as --brand-secondary for fills/decoration only (never text). */
-  --secondary: #E0F2FE;
-  --secondary-foreground: #0C4A6E;
-  --brand-secondary: #0EA5E9;
-  --muted: #E7EFF5;
-  --muted-foreground: #475569;
-  --accent: #E0F2FE;
-  --accent-foreground: #0C4A6E;
-  --destructive: #DC2626;
+  --secondary: #F1F1EF;
+  --secondary-foreground: #37352F;
+  --brand-secondary: #2383E2;    /* decoration only, never text */
+  --muted: #F1F1EF;
+  --muted-foreground: #6B6A66;   /* 5.4 on page, 5.05 on sidebar */
+  --accent: #EFEFED;
+  --accent-foreground: #37352F;
+  --destructive: #C4302B;
   --destructive-foreground: #FFFFFF;
-  --success: #16A34A;
-  --success-foreground: #000000;
-  --success-text: #15803D;
-  --warning-text: #B45309;
-  --border: #BAE6FD;
-  --input: #5B87A6;
-  --ring: #0369A1;
+  --success: #2B7A4B;
+  --success-foreground: #FFFFFF;
+  --success-text: #2B7A4B;
+  --warning-text: #A0550A;
+  --border: #E9E9E7;             /* hairline, decorative */
+  --input: #8C8B87;              /* >= 3:1 */
+  --ring: #1A6FC9;
 
-  --status-new: #0369A1;            --status-new-bg: #E0F2FE;
-  --status-docs-ready: #6D28D9;     --status-docs-ready-bg: #EDE9FE;
-  --status-applied: #4338CA;        --status-applied-bg: #E0E7FF;
-  --status-interviewing: #B45309;   --status-interviewing-bg: #FEF3C7;
-  --status-offer: #15803D;          --status-offer-bg: #DCFCE7;
-  --status-rejected: #B91C1C;       --status-rejected-bg: #FEE2E2;
-  --status-closed: #475569;         --status-closed-bg: #F1F5F9;
+  --sidebar: #F7F7F5;
+  --hover: rgba(55, 53, 47, 0.06);
+  --hover-strong: rgba(55, 53, 47, 0.09);
+
+  --tag-gray-bg: #E3E2E0;   --tag-gray-fg: #32302C;
+  --tag-brown-bg: #EEE0DA;  --tag-brown-fg: #442A1E;
+  --tag-orange-bg: #FADEC9; --tag-orange-fg: #49290E;
+  --tag-yellow-bg: #FDECC8; --tag-yellow-fg: #402C1B;
+  --tag-green-bg: #DBEDDB;  --tag-green-fg: #1C3829;
+  --tag-blue-bg: #D3E5EF;   --tag-blue-fg: #183347;
+  --tag-purple-bg: #E8DEEE; --tag-purple-fg: #412454;
+  --tag-pink-bg: #F5E0E9;   --tag-pink-fg: #4C2337;
+  --tag-red-bg: #FFE2DD;    --tag-red-fg: #5D1715;
+
+  --chart-1: #257DE0;
+  --chart-2: #F47230;
+  --chart-3: #00B894;
+  --chart-grid: #E7E7E7;
+  --chart-baseline: #C2C2C2;
+  --chart-muted: #D3D2CF;
+  /* Context bars beside an emphasized chart-1 bar (funnel: every step soft, "Applied" strong).
+     A 7-step ramp failed the dataviz validator: neighbouring steps were too close to tell apart. */
+  --chart-soft: #84B9F3;
 }
 
 .dark {
-  --background: #0B1220;
-  --foreground: #E0F2FE;
-  --card: #111A2E;
-  --card-foreground: #E0F2FE;
-  --popover: #111A2E;
-  --popover-foreground: #E0F2FE;
-  --primary: #38BDF8;
-  --primary-foreground: #0B1220;
-  --secondary: #1E293B;
-  --secondary-foreground: #E0F2FE;
-  --brand-secondary: #7DD3FC;
-  --muted: #1E293B;
-  --muted-foreground: #94A3B8;
-  --accent: #1E3A5F;
-  --accent-foreground: #E0F2FE;
-  --destructive: #F87171;
-  --destructive-foreground: #0B1220;
-  --success: #22C55E;
-  --success-foreground: #052E16;
-  --success-text: #4ADE80;
-  --warning-text: #FBBF24;
-  --border: #1E3A5F;
-  --input: #6B8DB5;
-  --ring: #38BDF8;
+  --background: #191919;
+  --foreground: #E3E2E0;
+  --card: #191919;
+  --card-foreground: #E3E2E0;
+  --popover: #252525;
+  --popover-foreground: #E3E2E0;
+  --primary: #4C9AE8;            /* #191919 text 5.94:1 */
+  --primary-foreground: #191919;
+  --secondary: #2A2A2A;
+  --secondary-foreground: #E3E2E0;
+  --brand-secondary: #529CCA;
+  --muted: #2A2A2A;
+  --muted-foreground: #9B9A97;
+  --accent: #2C2C2C;
+  --accent-foreground: #E3E2E0;
+  --destructive: #F07A73;
+  --destructive-foreground: #191919;
+  --success: #6BC28A;
+  --success-foreground: #191919;
+  --success-text: #6BC28A;
+  --warning-text: #E3A44A;
+  --border: #2F2F2F;
+  --input: #7A7976;
+  --ring: #4C9AE8;
 
-  --status-new: #7DD3FC;            --status-new-bg: #0C2A40;
-  --status-docs-ready: #C4B5FD;     --status-docs-ready-bg: #2A1F4D;
-  --status-applied: #A5B4FC;        --status-applied-bg: #1F2552;
-  --status-interviewing: #FCD34D;   --status-interviewing-bg: #3A2A0A;
-  --status-offer: #86EFAC;          --status-offer-bg: #0F2E1C;
-  --status-rejected: #FCA5A5;       --status-rejected-bg: #3B1414;
-  --status-closed: #CBD5E1;         --status-closed-bg: #1E293B;
+  --sidebar: #202020;
+  --hover: rgba(255, 255, 255, 0.055);
+  --hover-strong: rgba(255, 255, 255, 0.09);
+
+  --tag-gray-bg: #373737;   --tag-gray-fg: #D4D4D4;
+  --tag-brown-bg: #4A3228;  --tag-brown-fg: #E3C7B8;
+  --tag-orange-bg: #5C3B23; --tag-orange-fg: #F5C59A;
+  --tag-yellow-bg: #564328; --tag-yellow-fg: #F2D98A;
+  --tag-green-bg: #243D30;  --tag-green-fg: #A7D7B5;
+  --tag-blue-bg: #143A4E;   --tag-blue-fg: #A9D3F0;
+  --tag-purple-bg: #3C2D49; --tag-purple-fg: #D4BDEB;
+  --tag-pink-bg: #4E2C3C;   --tag-pink-fg: #F0B8D2;
+  --tag-red-bg: #522E2A;    --tag-red-fg: #F5B3A8;
+
+  --chart-1: #338CED;
+  --chart-2: #E76624;
+  --chart-3: #00A888;
+  --chart-grid: #303030;
+  --chart-baseline: #474747;
+  --chart-muted: #3F3F3F;
+  --chart-soft: #2F5F93;
 }
 
 @layer base {
@@ -164,6 +207,12 @@
     outline: 2px solid var(--ring);
     outline-offset: 2px;
   }
+}
+
+/* Numbers that line up in columns (tables, axis ticks). Big standalone figures keep
+   proportional digits (dataviz guidance). */
+@utility tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Respect reduced-motion: kill non-essential transitions and animations. */

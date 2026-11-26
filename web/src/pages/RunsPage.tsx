@@ -33,10 +33,11 @@ export function RunsPage() {
   return (
     <>
       <PageHeader
+        icon={Activity}
         title="Runs & spend"
         description={
           <>
-            AI usage this month: <span className="font-mono font-medium tabular-nums text-foreground">{formatUsd(monthSpend)}</span>{' '}
+            AI usage this month: <span className="font-medium tabular-nums text-foreground">{formatUsd(monthSpend)}</span>{' '}
             estimated API value. It's free on your Claude plan; the cap in Settings keeps usage modest.
           </>
         }
@@ -48,7 +49,7 @@ export function RunsPage() {
           Each run of the daily search, scoring, and tailoring is logged here with what it did.
         </EmptyState>
       ) : (
-        <div className="overflow-x-auto rounded-xl border bg-card">
+        <div className="overflow-x-auto rounded-lg border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -65,7 +66,7 @@ export function RunsPage() {
                 const Icon = s.icon
                 return (
                   <TableRow key={r.id}>
-                    <TableCell className="font-mono text-sm tabular-nums">{formatDateTime(r.started_at)}</TableCell>
+                    <TableCell className="text-sm tabular-nums">{formatDateTime(r.started_at)}</TableCell>
                     <TableCell className="text-sm">{RUN_KIND[r.kind] ?? r.kind}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center gap-1.5 text-sm ${s.className}`}>
@@ -79,7 +80,7 @@ export function RunsPage() {
                         .map(([k, v]) => `${k.replaceAll('_', ' ')}: ${v}`)
                         .join(' · ') || '—'}
                     </TableCell>
-                    <TableCell className="text-right font-mono text-sm tabular-nums">{formatUsd(Number(r.cost_usd))}</TableCell>
+                    <TableCell className="text-right text-sm tabular-nums">{formatUsd(Number(r.cost_usd))}</TableCell>
                   </TableRow>
                 )
               })}

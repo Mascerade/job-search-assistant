@@ -1,3 +1,4 @@
+import { Plus } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/EmptyState'
@@ -13,6 +14,7 @@ export function AddJobPage() {
   return (
     <>
       <PageHeader
+        icon={Plus}
         title="Add a job"
         description="For postings you find yourself (Handshake, LinkedIn, a friend's referral). Automatic import from a link comes in a later milestone."
       />

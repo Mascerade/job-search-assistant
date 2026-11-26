@@ -50,6 +50,7 @@ const router = createBrowserRouter([
           { index: true, element: <TodayPage /> },
           // Other pages load on demand to keep the first download small.
           { path: 'board', lazy: () => import('@/pages/BoardPage').then((m) => ({ Component: m.BoardPage })) },
+          { path: 'insights', lazy: () => import('@/pages/InsightsPage').then((m) => ({ Component: m.InsightsPage })) },
           { path: 'add', lazy: () => import('@/pages/AddJobPage').then((m) => ({ Component: m.AddJobPage })) },
           { path: 'jobs/:id', lazy: () => import('@/pages/JobDetailPage').then((m) => ({ Component: m.JobDetailPage })) },
           { path: 'profile', lazy: () => import('@/pages/ProfilePage').then((m) => ({ Component: m.ProfilePage })) },

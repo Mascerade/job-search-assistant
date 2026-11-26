@@ -8,20 +8,40 @@ import {
   useTable,
   type SortingState,
 } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Inbox, KeyRound, MapPin, Plus } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUp,
+  ArrowUpDown,
+  Calendar,
+  CaseSensitive,
+  ChevronDown,
+  ChevronRight,
+  CircleDot,
+  Hash,
+  Inbox,
+  KeyRound,
+  Layers,
+  MapPin,
+  Plus,
+  type LucideIcon,
+} from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { EmptyState, PageHeader } from '@/components/EmptyState'
-import { FitScore } from '@/components/FitScore'
+import { StatTile } from '@/components/StatTile'
 import { StatusBadge } from '@/components/StatusBadge'
+import { TrackTag } from '@/components/Tag'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { useJobs, useRuns } from '@/lib/queries'
-import { TRACK_LABEL } from '@/lib/status'
-import type { Job } from '@/lib/types'
 import { formatRelative, shortLocation } from '@/lib/format'
+import { headline, inRange, pct } from '@/lib/insights'
 import { isAutoRejected, needsReview } from '@/lib/jobs'
+import { useJobs, useRuns } from '@/lib/queries'
+import { fitLabel, TRACK_LABEL } from '@/lib/status'
+import type { Job, JobTrack } from '@/lib/types'
+import { cn } from '@/lib/utils'
 
 const features = tableFeatures({
   rowSortingFeature,
@@ -37,7 +57,7 @@ const columns = helper.columns([
     header: 'Fit',
     sortFn: 'basic',
     sortUndefined: 'last',
-    cell: ({ row }) => <FitScore score={row.original.fit_score} />,
+    cell: ({ row }) => <FitCell score={row.original.fit_score} />,
   }),
   helper.accessor((j) => `${j.title} ${j.company}`, {
     id: 'role',
@@ -51,7 +71,7 @@ const columns = helper.columns([
         >
           {row.original.title}
         </Link>
-        <div className="text-sm text-muted-foreground">{row.original.company}</div>
+        <div className="text-xs text-muted-foreground">{row.original.company}</div>
       </div>
     ),
   }),
@@ -60,25 +80,26 @@ const columns = helper.columns([
     header: 'Location',
     sortFn: 'alphanumeric',
     cell: ({ row }) => (
-      <span className="text-sm" title={row.original.location ?? undefined}>
+      <span className="text-sm text-muted-foreground" title={row.original.location ?? undefined}>
         {shortLocation(row.original.location)}
         {row.original.remote_type && row.original.remote_type !== 'onsite' && (
-          <span className="text-muted-foreground"> · {row.original.remote_type}</span>
+          <span> · {row.original.remote_type}</span>
         )}
       </span>
     ),
   }),
   helper.accessor((j) => (j.track ? TRACK_LABEL[j.track] : ''), {
     id: 'track',
-    header: 'Track',
+    header: 'Role type',
     sortFn: 'alphanumeric',
-    cell: ({ getValue }) => <span className="text-sm">{getValue() || '—'}</span>,
+    cell: ({ row }) =>
+      row.original.track ? <TrackTag track={row.original.track} /> : <span className="text-muted-foreground">—</span>,
   }),
   helper.accessor('first_seen_at', {
     header: 'Found',
     sortFn: 'basic',
     cell: ({ row }) => (
-      <span className="font-mono text-sm tabular-nums text-muted-foreground">
+      <span className="text-sm whitespace-nowrap text-muted-foreground tabular-nums">
         {formatRelative(row.original.first_seen_at)}
       </span>
     ),
@@ -97,6 +118,95 @@ const columns = helper.columns([
   }),
 ])
 
+/** Database-style column icons (Notion shows the property type beside each header). */
+const COLUMN_ICON: Record<string, LucideIcon> = {
+  fit_score: Hash,
+  role: CaseSensitive,
+  location: MapPin,
+  track: Layers,
+  first_seen_at: Calendar,
+  status: CircleDot,
+}
+
+/** Fit as a number over its word ("82 / Good"), never color alone. */
+function FitCell({ score }: { score: number | null }) {
+  if (score === null) return <span className="text-sm text-muted-foreground">—</span>
+  return (
+    <span className="flex flex-col leading-tight" aria-label={`Fit score ${score} out of 100, ${fitLabel(score)}`}>
+      <span className="text-sm font-medium tabular-nums">{score}</span>
+      <span className="text-xs text-muted-foreground">{fitLabel(score)}</span>
+    </span>
+  )
+}
+
+/** Last-30-days headline numbers; the same definitions as the Insights page. */
+function HeadlineRow({ jobs, rows }: { jobs: Job[]; rows: Job[] }) {
+  const h = headline(inRange(jobs, '30'))
+  const toReview = rows.filter((j) => j.pipeline_state === 'needs_approval').length
+  const ready = jobs.filter((j) => j.pipeline_state === 'ready' && j.status === 'docs_ready' && !j.closed_at).length
+  return (
+    <section aria-labelledby="headline-title" className="mb-8">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 id="headline-title" className="text-lg font-semibold tracking-tight">
+          Last 30 days
+        </h2>
+        <Button asChild variant="ghost" size="sm">
+          <Link to="/insights">
+            See insights
+            <ArrowRight data-icon="inline-end" />
+          </Link>
+        </Button>
+      </div>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+        <StatTile label="To review" value={toReview} note="Jobs with suggestions waiting" />
+        <StatTile label="Ready to apply" value={ready} note="Resume + cover letter ready" />
+        <StatTile label="Applied" value={h.applied} note={`${h.heardBack} heard back`} />
+        <StatTile label="% applied" value={pct(h.pctApplied)} note={`${h.applied} of ${h.matches} matches`} />
+      </div>
+    </section>
+  )
+}
+
+type View = 'all' | JobTrack
+const VIEWS: { key: View; label: string }[] = [
+  { key: 'all', label: 'All matches' },
+  { key: 'software', label: TRACK_LABEL.software },
+  { key: 'hybrid', label: TRACK_LABEL.hybrid },
+  { key: 'program_admin', label: TRACK_LABEL.program_admin },
+]
+
+/** Notion-style view tabs that filter the list by role type. */
+function ViewTabs({ rows, view, onChange }: { rows: Job[]; view: View; onChange: (v: View) => void }) {
+  return (
+    <div role="group" aria-label="Show matches for" className="flex gap-5 overflow-x-auto border-b">
+      {VIEWS.map(({ key, label }) => {
+        const count = key === 'all' ? rows.length : rows.filter((j) => j.track === key).length
+        const active = view === key
+        return (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(key)}
+            className={cn(
+              '-mb-px flex shrink-0 items-center gap-1.5 border-b-2 pt-1 pb-2.5 text-sm whitespace-nowrap transition-colors duration-150 pointer-coarse:min-h-11',
+              active ? 'border-foreground font-medium text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {label}
+            <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function ColumnIcon({ id }: { id: string }) {
+  const Icon = COLUMN_ICON[id]
+  return Icon ? <Icon className="size-3.5" aria-hidden="true" /> : null
+}
+
 function SortIcon({ dir }: { dir: false | 'asc' | 'desc' }) {
   if (dir === 'asc') return <ArrowUp className="size-3.5" aria-hidden="true" />
   if (dir === 'desc') return <ArrowDown className="size-3.5" aria-hidden="true" />
@@ -110,7 +220,7 @@ function SignInWarning() {
   const days = (latest?.counts as Record<string, number> | null)?.signin_days_left
   if (days === undefined || days > 10) return null
   return (
-    <div role="status" className="mb-6 flex items-start gap-3 rounded-xl border border-warning-text/40 bg-card px-4 py-3 text-sm">
+    <div role="status" className="mb-6 flex items-start gap-3 rounded-lg border border-warning-text/40 bg-card px-4 py-3 text-sm">
       <KeyRound className="mt-0.5 size-4 shrink-0 text-warning-text" aria-hidden="true" />
       <p>
         <span className="font-medium">Claude Code sign-in ends in {days} {days === 1 ? 'day' : 'days'}.</span>{' '}
@@ -126,7 +236,9 @@ export function TodayPage() {
   const { data: jobs, isLoading, error } = useJobs()
   const navigate = useNavigate()
   const [sorting, setSorting] = useState<SortingState>([{ id: 'fit_score', desc: true }])
-  const rows = useMemo(() => (jobs ?? []).filter(needsReview), [jobs])
+  const all = useMemo(() => (jobs ?? []).filter(needsReview), [jobs])
+  const [view, setView] = useState<View>('all')
+  const rows = useMemo(() => (view === 'all' ? all : all.filter((j) => j.track === view)), [all, view])
   const filtered = useMemo(() => (jobs ?? []).filter((j) => isAutoRejected(j) && !j.closed_at), [jobs])
   const [showFiltered, setShowFiltered] = useState(false)
 
@@ -141,8 +253,9 @@ export function TodayPage() {
   return (
     <>
       <PageHeader
+        icon={Inbox}
         title="Today"
-        description="New matches, best fit first. The daily search adds jobs each morning and your Mac scores them."
+        description="New matches and documents waiting on you. The list updates every morning."
         actions={
           <Button asChild>
             <Link to="/add">
@@ -167,7 +280,7 @@ export function TodayPage() {
             <Skeleton key={i} className="h-16 w-full" />
           ))}
         </div>
-      ) : rows.length === 0 ? (
+      ) : all.length === 0 ? (
         <EmptyState
           icon={Inbox}
           title="Nothing to review"
@@ -181,36 +294,39 @@ export function TodayPage() {
         </EmptyState>
       ) : (
         <>
-          {/* Phones: cards instead of a wide table (no sideways scrolling). */}
-          <ul className="flex flex-col gap-3 md:hidden">
+          <HeadlineRow jobs={jobs ?? []} rows={all} />
+          <ViewTabs rows={all} view={view} onChange={setView} />
+
+          {/* Phones: flat rows instead of a wide table (no sideways scrolling). */}
+          <ul className="flex flex-col md:hidden">
             {table.getRowModel().rows.map(({ original: job }) => (
-              <li key={job.id}>
-                <Link
-                  to={`/jobs/${job.id}`}
-                  className="block rounded-xl border bg-card p-4 transition-colors duration-200 hover:bg-accent/50"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium">{job.title}</p>
-                      <p className="text-sm text-muted-foreground">{job.company}</p>
-                    </div>
-                    <StatusBadge status={job.status} />
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                    <FitScore score={job.fit_score} />
-                    {job.location && (
-                      <span className="inline-flex items-center gap-1 text-muted-foreground">
-                        <MapPin className="size-3.5" aria-hidden="true" />
-                        {shortLocation(job.location)}
+              <li key={job.id} className="border-b">
+                <Link to={`/jobs/${job.id}`} className="flex flex-col gap-1.5 py-3 transition-colors duration-150 active:bg-hover">
+                  <span className="flex items-start justify-between gap-3">
+                    <span className="min-w-0 font-medium">{job.title}</span>
+                    {job.fit_score !== null && (
+                      <span className="shrink-0 font-medium tabular-nums" aria-label={`Fit ${job.fit_score}`}>
+                        {job.fit_score}
                       </span>
                     )}
-                  </div>
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {job.company}
+                    {job.location && ` · ${shortLocation(job.location)}`}
+                  </span>
+                  <span className="flex flex-wrap gap-1.5">
+                    <StatusBadge status={job.status} />
+                    {job.track && <TrackTag track={job.track} />}
+                    {job.pipeline_state === 'needs_approval' && (
+                      <span className="text-xs font-medium text-warning-text">Review suggestions</span>
+                    )}
+                  </span>
                 </Link>
               </li>
             ))}
           </ul>
 
-          <div className="hidden overflow-x-auto rounded-xl border bg-card md:block">
+          <div className="hidden md:block">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((hg) => (
@@ -228,11 +344,15 @@ export function TodayPage() {
                               onClick={header.column.getToggleSortingHandler()}
                               className="inline-flex items-center gap-1 rounded-sm font-medium hover:text-foreground"
                             >
+                              <ColumnIcon id={header.column.id} />
                               <table.FlexRender header={header} />
                               <SortIcon dir={sorted} />
                             </button>
                           ) : (
-                            <table.FlexRender header={header} />
+                            <span className="inline-flex items-center gap-1">
+                              <ColumnIcon id={header.column.id} />
+                              <table.FlexRender header={header} />
+                            </span>
                           )}
                         </TableHead>
                       )
@@ -252,7 +372,7 @@ export function TodayPage() {
                     }}
                   >
                     {row.getAllCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-3 whitespace-normal">
+                      <TableCell key={cell.id} className="whitespace-normal">
                         <table.FlexRender cell={cell} />
                       </TableCell>
                     ))}
@@ -277,7 +397,7 @@ export function TodayPage() {
             {showFiltered ? 'Hide' : 'Show'} {filtered.length} filtered out or below your fit threshold
           </Button>
           {showFiltered && (
-            <ul id="filtered-jobs" className="mt-2 flex flex-col divide-y rounded-xl border bg-card">
+            <ul id="filtered-jobs" className="mt-2 flex flex-col divide-y rounded-lg border bg-card">
               {filtered.map((job) => (
                 <li key={job.id} className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
                   <Link to={`/jobs/${job.id}`} className="min-w-0 flex-1 underline-offset-4 hover:underline">

@@ -85,6 +85,13 @@ export const STATUS: Record<ApplicationStatus, StatusMeta> = {
 
 export const TRACK_ORDER: JobTrack[] = ['software', 'program_admin', 'hybrid']
 
+/** One color per track, everywhere (tags, cards, charts): the chart series colors, in fixed order. */
+export const TRACK_SWATCH: Record<JobTrack, string> = {
+  software: 'bg-chart-1',
+  hybrid: 'bg-chart-2',
+  program_admin: 'bg-chart-3',
+}
+
 export const TRACK_LABEL: Record<JobTrack, string> = {
   software: 'Software & ML',
   program_admin: 'Program admin',

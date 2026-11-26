@@ -31,7 +31,7 @@ function ProfileSummary({ profile }: { profile: Profile }) {
         ].map(([label, n]) => (
           <div key={label} className="rounded-lg border bg-card p-3">
             <dt className="text-xs text-muted-foreground">{label}</dt>
-            <dd className="font-mono text-xl font-medium tabular-nums">{n}</dd>
+            <dd className="text-xl font-medium tabular-nums">{n}</dd>
           </div>
         ))}
       </dl>
@@ -96,6 +96,7 @@ export function ProfilePage() {
   return (
     <>
       <PageHeader
+        icon={UserRound}
         title="Master profile"
         description="Every fact the AI may use in your resumes and cover letters. Anything not here can only appear as a suggestion you approve."
         actions={
@@ -170,7 +171,7 @@ export function ProfilePage() {
               <ol className="flex flex-col gap-3">
                 {versions!.slice(0, 10).map((v) => (
                   <li key={v.version} className="text-sm">
-                    <span className="font-mono tabular-nums">v{v.version}</span>
+                    <span className="tabular-nums">v{v.version}</span>
                     <span className="text-muted-foreground"> · {formatDateTime(v.created_at)}</span>
                     {v.note && <p className="text-xs text-muted-foreground">{v.note}</p>}
                   </li>

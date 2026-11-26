@@ -15,9 +15,9 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { EmptyState, PageHeader } from '@/components/EmptyState'
-import { FitScore } from '@/components/FitScore'
 import { MoveToMenu } from '@/components/MoveToMenu'
 import { StatusBadge } from '@/components/StatusBadge'
+import { TrackTag } from '@/components/Tag'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -32,7 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { isAutoRejected } from '@/lib/jobs'
 import { useJobs, useSetStatus } from '@/lib/queries'
-import { CLOSED_STATUSES, STATUS } from '@/lib/status'
+import { CLOSED_STATUSES, fitLabel, STATUS } from '@/lib/status'
 import type { ApplicationStatus, Job } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -49,14 +49,29 @@ function columnOf(status: ApplicationStatus): ColumnId {
   return CLOSED_STATUSES.includes(status) ? 'closed' : (status as OpenColumn)
 }
 
+/** Role type + fit, wrapping onto two lines in narrow columns (never truncated). */
+function CardFooter({ job, className }: { job: Job; className?: string }) {
+  if (!job.track && job.fit_score === null) return null
+  return (
+    <div className={cn('flex flex-wrap items-center gap-x-2 gap-y-1.5', className)}>
+      {job.track && <TrackTag track={job.track} />}
+      {job.fit_score !== null && (
+        <span className="text-xs text-muted-foreground tabular-nums">
+          {job.fit_score} · {fitLabel(job.fit_score)}
+        </span>
+      )}
+    </div>
+  )
+}
+
 /** Card contents shared by the desktop board and the phone list. */
 function JobCardBody({ job, showStatus }: { job: Job; showStatus?: boolean }) {
   return (
     <>
-      <Link to={`/jobs/${job.id}`} className="block font-medium leading-snug underline-offset-4 hover:underline">
+      <Link to={`/jobs/${job.id}`} className="block text-sm font-medium leading-snug underline-offset-4 hover:underline">
         {job.title}
       </Link>
-      <p className="text-sm text-muted-foreground">{job.company}</p>
+      <p className="mt-0.5 text-xs text-muted-foreground">{job.company}</p>
       {showStatus && <StatusBadge status={job.status} className="mt-2" />}
       {job.closed_at && <p className="mt-1 text-xs font-medium text-warning-text">Posting closed</p>}
     </>
@@ -68,7 +83,10 @@ function DraggableCard({ job, showStatus }: { job: Job; showStatus?: boolean }) 
   return (
     <li
       ref={setNodeRef}
-      className={cn('rounded-lg border bg-card p-3 shadow-xs transition-opacity duration-200', isDragging && 'opacity-40')}
+      className={cn(
+        'rounded-lg border bg-card p-3 transition-[opacity,background-color] duration-150 hover:bg-hover',
+        isDragging && 'opacity-40',
+      )}
     >
       <div className="flex gap-1">
         <button
@@ -83,25 +101,21 @@ function DraggableCard({ job, showStatus }: { job: Job; showStatus?: boolean }) 
         <div className="min-w-0 flex-1">
           <JobCardBody job={job} showStatus={showStatus} />
         </div>
+        <div className="-mt-1 -mr-1 shrink-0">
+          <MoveToMenu job={job} />
+        </div>
       </div>
-      <div className="mt-2 flex items-center justify-between gap-2 pl-4">
-        <FitScore score={job.fit_score} compact />
-        <MoveToMenu job={job} />
-      </div>
+      <CardFooter job={job} className="mt-2 pl-4" />
     </li>
   )
 }
 
+/** Notion board column head: the status tag, then the count. */
 function ColumnHeading({ id, label, count }: { id: ColumnId; label: string; count: number }) {
-  const meta = STATUS[id === 'closed' ? 'not_interested' : id]
-  const Icon = meta.icon
   return (
-    <h2 id={`col-${id}`} className="flex items-center gap-2 px-2 py-1.5 text-sm font-semibold">
-      <span className={cn('inline-flex size-6 items-center justify-center rounded-full', meta.className)}>
-        <Icon className="size-3.5" aria-hidden="true" />
-      </span>
-      {label}
-      <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">{count}</span>
+    <h2 id={`col-${id}`} className="flex items-center gap-2 px-1 py-1.5 text-sm font-medium">
+      {id === 'closed' ? <span>{label}</span> : <StatusBadge status={id} />}
+      <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
     </h2>
   )
 }
@@ -113,11 +127,14 @@ function Column({ id, jobs }: { id: OpenColumn; jobs: Job[] }) {
       ref={setNodeRef}
       aria-labelledby={`col-${id}`}
       className={cn(
-        'flex min-h-48 min-w-0 flex-col rounded-xl border bg-muted/50 p-2 transition-colors duration-200',
-        isOver && 'border-primary bg-accent',
+        'flex min-h-48 min-w-0 flex-col gap-1 rounded-lg p-1 transition-colors duration-150',
+        isOver && 'bg-hover-strong',
       )}
     >
       <ColumnHeading id={id} label={STATUS[id].label} count={jobs.length} />
+      {jobs.length === 0 && (
+        <p className="rounded-lg border border-dashed px-3 py-5 text-center text-xs text-muted-foreground">No jobs here</p>
+      )}
       <ul className="flex flex-col gap-2">
         {jobs.map((job) => (
           <DraggableCard key={job.id} job={job} />
@@ -135,9 +152,9 @@ function ClosedZone({ jobs, dragging }: { jobs: Job[]; dragging: boolean }) {
       ref={setNodeRef}
       aria-labelledby="col-closed"
       className={cn(
-        'mt-3 rounded-xl border border-dashed bg-muted/30 p-2 transition-colors duration-200',
-        dragging && 'border-primary/60',
-        isOver && 'border-primary bg-accent',
+        'mt-6 rounded-lg border border-transparent bg-sidebar p-2 transition-colors duration-150',
+        dragging && 'border-dashed border-input',
+        isOver && 'bg-hover-strong',
       )}
     >
       <ColumnHeading id="closed" label="Closed" count={jobs.length} />
@@ -241,8 +258,9 @@ export function BoardPage() {
   return (
     <>
       <PageHeader
+        icon={SquareKanban}
         title="Board"
-        description="Drag a card by its handle, or use the arrows button on any card to move it without dragging."
+        description="Drag a card by its handle to a new column, or use its ⋯ button to move it."
       />
 
       {isLoading ? (
@@ -291,8 +309,8 @@ export function BoardPage() {
                 {byColumn[mobileColumn].map((job) => (
                   <li key={job.id} className="rounded-lg border bg-card p-4">
                     <JobCardBody job={job} showStatus={mobileColumn === 'closed'} />
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                      <FitScore score={job.fit_score} />
+                    <CardFooter job={job} className="mt-2" />
+                    <div className="mt-3">
                       <MoveToMenu job={job} variant="full" />
                     </div>
                   </li>
@@ -309,7 +327,7 @@ export function BoardPage() {
             onDragCancel={() => setActive(null)}
           >
             <div className="hidden xl:block">
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid grid-cols-5 gap-4">
                 {OPEN_COLUMNS.map((id) => (
                   <Column key={id} id={id} jobs={byColumn[id]} />
                 ))}

@@ -32,7 +32,8 @@ cover letter for each match, and tracks every application from "found" to "offer
 - **`web/`** — React + TypeScript + Vite + Tailwind + shadcn/ui. Talks to Supabase directly with
   the *publishable* key; row-level security limits every table to the owner account.
 - **`supabase/`** — schema (`migrations/`) and pgTAP security tests (`tests/`).
-- **`design-system/`** — the UI/UX Pro Max design system the website follows.
+- **`design-system/`** — the design system the website follows (Notion-inspired restyle, approved from
+  Figma mockups; see the last section of `MASTER.md`).
 - **`private/`** and **`resumes/`** — personal data (master profile, eval labels). **Gitignored.**
 
 ### Key ideas
@@ -44,6 +45,9 @@ cover letter for each match, and tracks every application from "found" to "offer
 - **Workday runs on the Mac.** Workday rate-limits cloud servers, so `daily.yml` uses
   `--where cloud` and the Mac's `jobsearch local-daily` fetches Workday boards.
 - **Status history is automatic.** A trigger records every status change.
+- **Insights.** `/insights` charts the search: the funnel from found to offer, % applied, role
+  types, sources, work setup, staffing-agency share, matches per day, fit scores, top employers.
+  Definitions live in `web/src/lib/insights.ts` (Today's headline numbers use the same ones).
 - **Timing focus.** Until a date in Settings (default March 1, 2027) the daily 20 documents go to
   software, then university tech, then program admin: admin roles usually hire weeks before the
   start date, and the start has to be after graduation. Postings with a future start date (a

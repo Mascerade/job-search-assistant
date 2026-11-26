@@ -1,4 +1,4 @@
-import { ArrowRightLeft, Check } from 'lucide-react'
+import { ArrowRightLeft, Check, Ellipsis } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -41,7 +41,7 @@ export function MoveToMenu({
       <DropdownMenuTrigger asChild>
         {variant === 'icon' ? (
           <Button variant="ghost" size="icon-sm" aria-label={`Move "${job.title}" to another status`}>
-            <ArrowRightLeft />
+            <Ellipsis />
           </Button>
         ) : (
           <Button variant="outline">

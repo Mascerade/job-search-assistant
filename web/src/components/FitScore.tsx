@@ -23,11 +23,11 @@ export function FitScore({
       className={cn('inline-flex items-center gap-2 whitespace-nowrap', className)}
       aria-label={`Fit score ${score} out of 100, ${label}`}
     >
-      <span className="font-mono text-sm font-medium tabular-nums">{score}</span>
+      <span className="text-sm font-medium tabular-nums">{score}</span>
       <span className="text-sm text-muted-foreground">· {label}</span>
       {!compact && (
-        <span aria-hidden="true" className="hidden h-1.5 w-12 overflow-hidden rounded-full bg-muted sm:inline-block">
-          <span className="block h-full rounded-full bg-primary" style={{ width: `${score}%` }} />
+        <span aria-hidden="true" className="hidden h-1.5 w-12 overflow-hidden rounded-full bg-chart-1/20 sm:inline-block">
+          <span className="block h-full rounded-full bg-chart-1" style={{ width: `${score}%` }} />
         </span>
       )}
     </span>

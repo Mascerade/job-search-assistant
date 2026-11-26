@@ -269,3 +269,52 @@ These decisions were made deliberately for this app; they win over anything abov
 
 Light-mode pairs verified: fg/bg 8.9:1, muted-fg/muted 6.5:1, on-primary/primary 5.9:1,
 on-accent/accent 6.4:1, on-destructive/destructive 4.8:1.
+
+---
+
+## Notion-inspired restyle (2026-11-27) — overrides palette, type and surfaces above
+
+Approved by Kojo from the Figma mockups ("Job Search Assistant — redesign", Figma drafts; Color
+variables there use the same names as the CSS variables). Everything above still applies unless
+replaced here (accessibility, motion, checklist).
+
+**Style:** Notion-like workspace. White pages, warm grays, soft gray sidebar, flat surfaces with
+hairline borders, pastel select-tags, database-style tables, underline tabs. No shadows except
+floating menus, tooltips, and a card while it's being dragged. Radius 6px (tags 4px).
+
+**Type:** the device's system UI font (`ui-sans-serif, -apple-system, "Segoe UI", …`), like Notion;
+the Fira fonts are gone. Page title 30px bold; section 18px semibold; UI 14px; body 16px.
+Numbers in tables and axes use `tabular-nums`; big standalone figures keep proportional digits.
+
+| Token | Light | Dark | Check |
+|---|---|---|---|
+| `--background` | `#FFFFFF` | `#191919` | |
+| `--sidebar` | `#F7F7F5` | `#202020` | |
+| `--foreground` | `#37352F` | `#E3E2E0` | 12.3 / 13.6 |
+| `--muted-foreground` | `#6B6A66` | `#9B9A97` | ≥ 5.0 on page + sidebar |
+| `--primary` (+ text) | `#1A6FC9` (+ white) | `#4C9AE8` (+ `#191919`) | 5.05 / 5.94 |
+| `--border` (hairline) | `#E9E9E7` | `#2F2F2F` | decorative |
+| `--input` | `#8C8B87` | `#7A7976` | ≥ 3:1 |
+| `--hover` / `--hover-strong` | `rgba(55,53,47,.06/.09)` | `rgba(255,255,255,.055/.09)` | |
+| `--destructive` | `#C4302B` | `#F07A73` | ≥ 4.9 / 5.3 |
+| `--success-text` / `--warning-text` | `#2B7A4B` / `#A0550A` | `#6BC28A` / `#E3A44A` | ≥ 4.6 |
+
+Notion's exact gray text (`#787774`, 4.48:1) and button blue (`#2383E2`, 3.88:1) miss 4.5:1, so
+slightly darker values are used.
+
+**Tags** (`--tag-{gray,brown,orange,yellow,green,blue,purple,pink,red}-bg/-fg`): Notion's pastels
+in light (all ≥ 10:1), matching muted fills with light text in dark (all ≥ 6.3:1).
+Statuses: New gray · Docs ready purple · Applied blue · Interviewing orange · Offer green ·
+Rejected red · Withdrawn/Not interested brown — always with their icon and label.
+Job tags: staffing agency orange · short description yellow · future start green · location unclear gray.
+Role type: gray tag + dot in the track's chart color.
+
+**Charts** (dataviz skill; plain HTML/CSS, no library):
+- Track colors, fixed order: software `--chart-1` blue, university tech `--chart-2` orange,
+  program admin `--chart-3` aqua (light `#257DE0/#F47230/#00B894`, dark `#338CED/#E76624/#00A888`).
+  Validator: all checks pass both modes; light orange/aqua are < 3:1 vs white, so every chart has
+  a legend or direct labels plus a "Show as table" view.
+- Funnel uses emphasis, not a ramp: every step `--chart-soft`, "Applied" `--chart-1`. A 7-step
+  blue ramp failed the validator (neighbouring steps too close).
+- Bars ≤ 24px, 4px rounded data end, 2px gaps; hairline grid; tooltips on hover and focus with the
+  value first; one hero figure per view (% applied).

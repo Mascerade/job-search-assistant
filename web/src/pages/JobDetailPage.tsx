@@ -1,20 +1,27 @@
 import {
   ArrowLeft,
+  Building2,
+  Calendar,
   CalendarClock,
+  CircleDot,
   CircleOff,
   ExternalLink,
   FileText,
+  Gauge,
   History,
+  Layers,
+  Link2,
   MapPin,
   Pencil,
-  Sparkles,
+  Tags,
   Trash2,
   TriangleAlert,
   UserPlus,
   Wallet,
   X,
+  type LucideIcon,
 } from 'lucide-react'
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 import { DocumentsTab } from '@/components/DocumentsTab'
@@ -24,6 +31,7 @@ import { JobForm } from '@/components/JobForm'
 import { EMPTY_JOB_FORM, toJobInsert, type JobFormValues } from '@/lib/jobForm'
 import { MoveToMenu } from '@/components/MoveToMenu'
 import { StatusBadge } from '@/components/StatusBadge'
+import { Tag, TrackTag } from '@/components/Tag'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -41,8 +49,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { formatDateTime, formatRelative, formatSalary } from '@/lib/format'
 import { useDeleteJob, useJob, useLatestScore, useStatusHistory, useUpdateJob } from '@/lib/queries'
-import { sourceLabel, TAG_LABEL } from '@/lib/jobs'
-import { STATUS, TRACK_LABEL } from '@/lib/status'
+import { sourceLabel, TAG_COLOR, TAG_LABEL } from '@/lib/jobs'
+import { STATUS } from '@/lib/status'
 import type { Contact, Job } from '@/lib/types'
 
 function toFormValues(job: Job): JobFormValues {
@@ -65,21 +73,16 @@ function FitCard({ job }: { job: Job }) {
   const concerns = score?.details.concerns ?? []
   const years = score?.details.years_required
   return (
-    <Card className="mb-6">
-      <CardContent className="flex flex-col gap-3">
-        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-primary" aria-hidden="true" />
-            <span className="text-sm font-medium">Fit</span>
-            <FitScore score={job.fit_score} />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {job.fit_reason ?? 'Not scored yet. Your Mac scores new jobs each morning.'}
-          </p>
-        </div>
+    <section aria-labelledby="fit-heading" className="mb-8 flex gap-3 rounded-lg bg-muted p-4">
+      <Gauge className="mt-0.5 size-[18px] shrink-0 text-muted-foreground" aria-hidden="true" />
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <h2 id="fit-heading" className="text-sm font-medium">
+          Why it fits
+        </h2>
+        <p className="text-sm">{job.fit_reason ?? 'Not scored yet. Your Mac scores new jobs each morning.'}</p>
         {(concerns.length > 0 || (years !== undefined && years !== null)) && (
-          <div className="border-t pt-3">
-            <h2 className="mb-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">Watch out for</h2>
+          <div className="mt-1">
+            <h3 className="mb-1.5 text-xs font-medium text-muted-foreground">Watch out for</h3>
             <ul className="flex flex-col gap-1 text-sm">
               {years !== undefined && years !== null && (
                 <li className="flex items-start gap-2">
@@ -96,8 +99,21 @@ function FitCard({ job }: { job: Job }) {
             </ul>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
+  )
+}
+
+/** One Notion-style property row: icon + label on the left, the value on the right. */
+function Property({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[8.5rem_1fr] items-start gap-2 py-1 sm:grid-cols-[10.5rem_1fr]">
+      <dt className="flex min-h-7 items-center gap-2 text-sm text-muted-foreground">
+        <Icon className="size-4 shrink-0" aria-hidden="true" />
+        {label}
+      </dt>
+      <dd className="flex min-h-7 min-w-0 flex-wrap items-center gap-1.5 text-sm">{children}</dd>
+    </div>
   )
 }
 
@@ -272,7 +288,7 @@ function HistoryList({ jobId }: { jobId: string }) {
               </>
             )}
           </div>
-          <p className="mt-1 font-mono text-xs tabular-nums text-muted-foreground">{formatDateTime(h.changed_at)}</p>
+          <p className="mt-1 text-xs tabular-nums text-muted-foreground">{formatDateTime(h.changed_at)}</p>
         </li>
       ))}
     </ol>
@@ -316,61 +332,77 @@ export function JobDetailPage() {
   const salary = formatSalary(job.salary_min, job.salary_max)
 
   return (
-    <>
+    <div className="mx-auto max-w-[54rem]">
       <Button
         variant="ghost"
-        className="mb-4 -ml-2 text-muted-foreground"
+        className="mb-4 -ml-2"
         onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
       >
         <ArrowLeft data-icon="inline-start" />
         Back
       </Button>
 
-      <header className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+      <header className="mb-6">
+        <Building2 className="mb-3 size-8 text-muted-foreground" strokeWidth={1.5} aria-hidden="true" />
+        <h1 className="text-3xl font-bold tracking-tight">{job.title}</h1>
+        <dl className="mt-5 flex flex-col">
+          <Property icon={CircleDot} label="Status">
             <StatusBadge status={job.status} />
-            {job.track && <span className="text-xs text-muted-foreground">{TRACK_LABEL[job.track]}</span>}
             {job.closed_at && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-status-closed-bg px-2.5 py-0.5 text-xs font-medium text-status-closed">
-                <CircleOff className="size-3.5" aria-hidden="true" />
+              <Tag color="brown" icon={CircleOff}>
                 Posting closed
-              </span>
+              </Tag>
             )}
-            {job.tags.map((t) => (
-              <span key={t} className="rounded-full border px-2 py-0.5 text-xs">
-                {TAG_LABEL[t] ?? t}
-              </span>
-            ))}
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">{job.title}</h1>
-          <p className="text-lg text-muted-foreground">{job.company}</p>
-          <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted-foreground">
-            {(job.location || job.remote_type) && (
-              <div className="inline-flex items-center gap-1.5">
-                <MapPin className="size-4" aria-hidden="true" />
-                <dt className="sr-only">Location</dt>
-                <dd>{[job.location, job.remote_type].filter(Boolean).join(' · ')}</dd>
-              </div>
+          </Property>
+          <Property icon={Gauge} label="Fit">
+            <FitScore score={job.fit_score} />
+          </Property>
+          <Property icon={Layers} label="Role type">
+            {job.track ? <TrackTag track={job.track} /> : <span className="text-muted-foreground">Not set</span>}
+          </Property>
+          <Property icon={Building2} label="Company">
+            {job.company}
+          </Property>
+          {(job.location || job.remote_type) && (
+            <Property icon={MapPin} label="Location">
+              {[job.location, job.remote_type].filter(Boolean).join(' · ')}
+            </Property>
+          )}
+          {salary && (
+            <Property icon={Wallet} label="Salary">
+              <span className="tabular-nums">{salary}</span>
+            </Property>
+          )}
+          <Property icon={Calendar} label="Found">
+            {formatRelative(job.first_seen_at)}
+          </Property>
+          <Property icon={Link2} label="Source">
+            {job.url ? (
+              <a
+                href={job.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+              >
+                {sourceLabel(job) ?? 'Posting'}
+                <ExternalLink className="size-3.5" aria-hidden="true" />
+                <span className="sr-only">(opens in a new tab)</span>
+              </a>
+            ) : (
+              (sourceLabel(job) ?? 'Added by you')
             )}
-            {salary && (
-              <div className="inline-flex items-center gap-1.5">
-                <Wallet className="size-4" aria-hidden="true" />
-                <dt className="sr-only">Salary</dt>
-                <dd className="font-mono tabular-nums">{salary}</dd>
-              </div>
-            )}
-            <div className="inline-flex items-center gap-1.5">
-              <CalendarClock className="size-4" aria-hidden="true" />
-              <dt className="sr-only">Found</dt>
-              <dd>
-                Found {formatRelative(job.first_seen_at)}
-                {sourceLabel(job) && ` on ${sourceLabel(job)}`}
-              </dd>
-            </div>
-          </dl>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          </Property>
+          {job.tags.length > 0 && (
+            <Property icon={Tags} label="Tags">
+              {job.tags.map((t) => (
+                <Tag key={t} color={TAG_COLOR[t] ?? 'gray'}>
+                  {TAG_LABEL[t] ?? t}
+                </Tag>
+              ))}
+            </Property>
+          )}
+        </dl>
+        <div className="mt-5 flex flex-wrap gap-2">
           {job.url && (
             <Button asChild>
               <a href={job.url} target="_blank" rel="noopener noreferrer">
@@ -381,7 +413,7 @@ export function JobDetailPage() {
             </Button>
           )}
           <MoveToMenu job={job} variant="full" />
-          <Button variant="outline" onClick={() => setEditing(true)}>
+          <Button variant="ghost" onClick={() => setEditing(true)}>
             <Pencil data-icon="inline-start" />
             Edit
           </Button>
@@ -402,9 +434,12 @@ export function JobDetailPage() {
       <FitCard job={job} />
 
       <Tabs defaultValue="posting">
-        <TabsList className="mb-4 grid w-full grid-cols-4 sm:w-fit">
+        <TabsList className="mb-5">
           <TabsTrigger value="posting">Posting</TabsTrigger>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="documents">
+            Documents
+            {job.pipeline_state === 'needs_approval' && <Tag color="yellow">To review</Tag>}
+          </TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
@@ -502,6 +537,6 @@ export function JobDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }

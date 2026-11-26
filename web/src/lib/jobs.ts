@@ -1,3 +1,4 @@
+import type { TagColor } from '@/components/Tag'
 import type { Job } from './types'
 
 /** Jobs the pipeline rejected stay out of Today and the Board unless you've acted on them. */
@@ -9,6 +10,15 @@ export function isAutoRejected(job: Job): boolean {
 /** Waiting for a decision: new or docs ready, not rejected by the pipeline, posting still open. */
 export function needsReview(job: Job): boolean {
   return (job.status === 'new' || job.status === 'docs_ready') && !isAutoRejected(job) && !job.closed_at
+}
+
+
+/** Tag colors for job tags (always shown with their label). */
+export const TAG_COLOR: Record<string, TagColor> = {
+  'staffing-agency': 'orange',
+  'short-description': 'yellow',
+  'future-start': 'green',
+  'location-unclear': 'gray',
 }
 
 export const TAG_LABEL: Record<string, string> = {

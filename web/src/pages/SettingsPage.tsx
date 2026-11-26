@@ -1,3 +1,4 @@
+import { Settings as SettingsIcon } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/EmptyState'
@@ -162,7 +163,7 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
         <Input
           id={key}
           inputMode="decimal"
-          className="w-28 font-mono tabular-nums"
+          className="w-28 tabular-nums"
           value={form[key]}
           onChange={(e) => patch({ [key]: e.target.value } as Partial<FormState>)}
           aria-invalid={!!errors[key]}
@@ -184,7 +185,8 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
 
   return (
     <>
-      <PageHeader title="Settings" description="What the daily search looks for. Changes apply from the next run." />
+      <PageHeader
+        icon={SettingsIcon} title="Settings" description="What the daily search looks for. Changes apply from the next run." />
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
         <Card>
           <CardHeader>
@@ -205,7 +207,7 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
             <Input
               id="focus_until"
               type="date"
-              className="w-44 font-mono tabular-nums"
+              className="w-44 tabular-nums"
               value={form.focus_until}
               onChange={(e) => patch({ focus_until: e.target.value })}
               aria-describedby="focus_until-hint"

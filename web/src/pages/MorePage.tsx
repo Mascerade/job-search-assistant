@@ -1,4 +1,4 @@
-import { ChevronRight, LogOut } from 'lucide-react'
+import { ChevronRight, Ellipsis, LogOut } from 'lucide-react'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/EmptyState'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -9,9 +9,10 @@ import { SECONDARY_NAV, signOut } from '@/lib/nav'
 export function MorePage() {
   return (
     <>
-      <PageHeader title="More" />
+      <PageHeader
+        icon={Ellipsis} title="More" />
       <nav aria-label="More pages">
-        <ul className="flex flex-col divide-y rounded-xl border bg-card">
+        <ul className="flex flex-col divide-y rounded-lg border bg-card">
           {SECONDARY_NAV.map(({ to, label, icon: Icon }) => (
             <li key={to}>
               <Link to={to} className="flex min-h-14 items-center gap-3 px-4 text-sm font-medium">
