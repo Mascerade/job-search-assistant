@@ -1,6 +1,14 @@
 from pathlib import Path
 
-from jobsearch.content import CoverLetterContent, EntryBlock, Line, ResumeContent, SkillLine, Tailored
+from jobsearch.content import (
+    CoverLetterContent,
+    EntryBlock,
+    Line,
+    ResumeContent,
+    SkillLine,
+    SkillSuggestion,
+    Tailored,
+)
 from jobsearch.documents import _set_text, cover_preview, resume_preview
 from jobsearch.profile import load_profile
 from jobsearch.render import _drop_least_relevant
@@ -96,7 +104,8 @@ def test_unknown_skills_move_to_suggested_skills() -> None:
         None,
     )
     assert t.resume.skills[0].items == ["Python"]  # canonical spelling from the profile
-    assert t.resume.suggested_skills == ["Kubernetes"]
+    assert [s.skill for s in t.resume.suggested_skills] == ["Kubernetes"]
+    assert not t.resume.suggested_skills[0].obvious
 
 
 # ---------- suggestions and decisions ----------
@@ -110,7 +119,7 @@ def test_suggestions_and_decisions() -> None:
         ],
         skills=["Python"],
     )
-    t.resume.suggested_skills = ["SQL"]
+    t.resume.suggested_skills = [SkillSuggestion(skill="SQL", category="Languages")]
     paths = {s.path for s in suggestions(t)}
     assert paths == {"resume.experience.0.bullets.1", "resume.suggested_skills.0"}
 
@@ -154,3 +163,41 @@ def test_trim_drops_extra_projects_then_longest_block_bullets() -> None:
     )
     assert _drop_least_relevant(r) and [b.entry_id for b in r.projects] == ["p1", "p2"]
     assert _drop_least_relevant(r) and len(r.experience[0].bullets) == 3  # the longest block loses a bullet
+
+
+def test_obvious_skills_are_added_without_asking_and_uncertain_ones_capped() -> None:
+    t = tailored([Line(text="Built a REST API.", fact_ids=["acme-api"])])
+    t.resume.suggested_skills = [
+        SkillSuggestion(skill="SQL", category="Languages", obvious=True, basis="PostgreSQL"),
+        SkillSuggestion(skill="Kubernetes", category="Languages"),
+        SkillSuggestion(skill="Terraform", category="Languages"),  # second uncertain: dropped
+        SkillSuggestion(skill="python", category="Languages", obvious=True),  # already in the profile
+    ]
+    t = code_checks(t, PROFILE, None)
+    assert [(s.skill, s.obvious) for s in t.resume.suggested_skills] == [("SQL", True), ("Kubernetes", False)]
+    assert [s.path for s in suggestions(t)] == [
+        "resume.suggested_skills.1"
+    ]  # only the uncertain one is asked
+    final = apply_decisions(t, approved=set())
+    assert final.resume.skills[0].items == ["Python", "SQL"]
+
+
+def test_declined_skills_are_never_suggested_again() -> None:
+    profile = PROFILE.model_copy(deep=True)
+    profile.declined_skills = ["Kubernetes"]
+    t = tailored([Line(text="Built a REST API.", fact_ids=["acme-api"])], skills=["Python", "Kubernetes"])
+    t = code_checks(t, profile, None)
+    assert t.resume.suggested_skills == []
+
+
+def test_profile_learns_and_declines_skills() -> None:
+    profile = PROFILE.model_copy(deep=True)
+    assert profile.add_skill("SQL", "Languages") and "sql" in profile.all_skills()
+    assert not profile.add_skill("sql", "Languages")  # already there
+    profile.decline_skill("Kubernetes")
+    assert profile.declined_skills == ["Kubernetes"]
+
+
+def test_version_one_documents_with_string_skills_still_load() -> None:
+    r = ResumeContent.model_validate({"template": "admin", "suggested_skills": ["Zoom"]})
+    assert r.suggested_skills[0].skill == "Zoom" and not r.suggested_skills[0].obvious

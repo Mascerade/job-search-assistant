@@ -14,7 +14,7 @@ import re
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from .content import CoverLetterContent, ResumeContent, Tailored
 from .llm import AuthExpiredError, ClaudeCode, LLMError
@@ -22,7 +22,10 @@ from .models import JobForScoring
 from .profile import Profile
 from .render import RenderError, build_cover_letter, fit_one_page, to_pdf
 from .tailor import tailor
-from .verify import apply_decisions, code_checks, model_check, suggestions
+from .verify import apply_decisions, code_checks, model_check, obvious_skills, suggestions
+
+if TYPE_CHECKING:
+    from .db import DecisionRow
 
 WRITER_MODEL = "opus"
 CHECKER_MODEL = "sonnet"
@@ -62,9 +65,14 @@ def resume_preview(r: ResumeContent, profile: Profile) -> dict[str, Any]:
         "headline": r.headline,
         "summary": _line("resume.summary", r.summary.text, r.summary.suggestion) if r.summary else None,
         "sections": sections,
-        "skills": [f"{s.category}: {', '.join(s.items)}" for s in r.skills],
+        "skills": [f"{s.category}: {', '.join(s.items)}" for s in r.skills]
+        + [
+            f"{s.category or 'Skills'}: {s.skill} (added: {s.basis})" for s in r.suggested_skills if s.obvious
+        ],
         "suggested_skills": [
-            _line(f"resume.suggested_skills.{k}", s, True) for k, s in enumerate(r.suggested_skills)
+            _line(f"resume.suggested_skills.{k}", s.skill, True)
+            for k, s in enumerate(r.suggested_skills)
+            if not s.obvious
         ],
     }
 
@@ -107,6 +115,12 @@ def tailor_job(
     tailored = code_checks(tailored, profile, job.description)
     tailored, check_resp = model_check(checker, tailored, profile)
     pending = suggestions(tailored)
+    learned = [s for s in obvious_skills(tailored) if profile.add_skill(s.skill, s.category)]
+    if learned:  # near-certain skills join the master profile, so they're never inferred again
+        db.insert_profile(
+            profile.model_dump(mode="json", exclude_defaults=True),
+            "Added skills implied by your profile: " + ", ".join(s.skill for s in learned),
+        )
     cost = resp.cost_usd + (check_resp.cost_usd if check_resp else 0.0)
     template = tailored.resume.template
     payload = {
@@ -161,6 +175,7 @@ def render_job(job_id: str, profile: Profile) -> None:
     for d in decisions:  # apply Kojo's edits to approved suggestions
         if d.decision == "approved" and d.final_text:
             _set_text(tailored, d.path, d.final_text)
+    _remember_skill_decisions(tailored, decisions, profile)
     final = apply_decisions(tailored, approved)
     if len(final.cover_letter.paragraphs) < 2:
         raise RenderError("the cover letter is too short after the rejected suggestions; regenerate it")
@@ -189,6 +204,37 @@ def render_job(job_id: str, profile: Profile) -> None:
     db.mark_job_documents_ready(job_id)
 
 
+def _remember_skill_decisions(t: Tailored, decisions: list[DecisionRow], profile: Profile) -> None:
+    """Approved skills join the master profile; rejected ones are never suggested again."""
+    from . import db
+
+    added, declined = [], []
+    for d in decisions:
+        if not d.path.startswith("resume.suggested_skills.") or d.decision == "pending":
+            continue
+        k = int(d.path.rsplit(".", 1)[1])
+        if k >= len(t.resume.suggested_skills):
+            continue
+        sk = t.resume.suggested_skills[k]
+        if d.decision == "approved" and profile.add_skill(sk.skill, sk.category):
+            added.append(sk.skill)
+        elif d.decision == "rejected" and sk.skill.lower() not in {
+            x.lower() for x in profile.declined_skills
+        }:
+            profile.decline_skill(sk.skill)
+            declined.append(sk.skill)
+    if added or declined:
+        note = "; ".join(
+            x
+            for x in (
+                f"added {', '.join(added)}" if added else "",
+                f"declined {', '.join(declined)}" if declined else "",
+            )
+            if x
+        )
+        db.insert_profile(profile.model_dump(mode="json", exclude_defaults=True), f"Skill review: {note}")
+
+
 def _set_text(t: Tailored, path: str, text: str) -> None:
     parts = path.split(".")
     if path == "resume.summary" and t.resume.summary is not None:
@@ -199,7 +245,7 @@ def _set_text(t: Tailored, path: str, text: str) -> None:
     elif parts[:2] == ["cover", "paragraphs"]:
         t.cover_letter.paragraphs[int(parts[2])].text = text
     elif parts[:2] == ["resume", "suggested_skills"]:
-        t.resume.suggested_skills[int(parts[2])] = text
+        t.resume.suggested_skills[int(parts[2])].skill = text
 
 
 # ---------------------------------------------------------------------------

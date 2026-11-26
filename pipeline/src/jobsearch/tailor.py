@@ -36,6 +36,7 @@ def profile_for_prompt(profile: Profile) -> str:
         "extra_facts": [{"id": f.id, "text": f.text} for f in profile.extra_facts],
         "skills": [g.model_dump() for g in profile.skills],
         "certifications": profile.certifications,
+        "declined_skills": profile.declined_skills,
         "summaries": profile.summaries,
     }
     return json.dumps(data, indent=1, ensure_ascii=False)
@@ -57,11 +58,15 @@ RULES FOR EVERY RESUME BULLET, SUMMARY, AND COVER-LETTER PARAGRAPH ("line")
 - Rephrase, combine, condense, and reorder facts freely, and mirror the posting's keywords
   where they are true. Keep every number exactly as it appears in the cited facts; never add
   a number, metric, tool, skill, title, or outcome that the cited facts don't state.
+- Don't add qualities the facts don't state (e.g. "reliable", "robust", "scalable",
+  "large-scale", "complex"); describe what was done, not how impressive it was.
 - If a line would be stronger with something the facts don't support (a reframing such as
   presenting volunteer coordination as project management, an inferred skill, a claim about
   impact), you may include it only with suggestion=true and a short rationale. The candidate
   approves or rejects every suggestion. Use few suggestions; don't pad.
 - rationale is null when suggestion is false.
+- Don't state work authorization, citizenship, visa status, or any other fact the profile doesn't
+  contain, even if the posting asks applicants to confirm it.
 - Use past tense for roles that have ended and present tense only for roles whose end is
   "Present" (in the resume and the cover letter).
 
@@ -76,8 +81,14 @@ RESUME
   most relevant first, each under about 30 words. It must fit on one page.
 - skills: pick and order the categories and items most relevant to the posting, using only
   items that appear in the profile's skills (exact wording). For technical roles keep 3–5
-  categories; for admin roles 2–4. If the posting needs a skill the profile lacks but the
-  candidate plausibly has, list it in suggested_skills (max 3); otherwise leave it empty.
+  categories; for admin roles 2–4.
+- suggested_skills (max 4): skills the posting asks for that the profile's skills don't list.
+  For each, give the existing profile category it belongs in and `basis` (the profile items
+  that imply it). Set obvious=true only when the profile makes it near-certain, e.g. SQL given
+  PostgreSQL/MySQL, or Google Workspace for a student who lists Microsoft Office; otherwise
+  obvious=false. Obvious skills are added automatically; uncertain ones are asked about, so
+  include at most one uncertain skill, and only if the posting really needs it. Never suggest
+  anything in declined_skills.
 
 COVER LETTER
 - greeting: "Dear Hiring Manager," unless the posting names the hiring team (then e.g.

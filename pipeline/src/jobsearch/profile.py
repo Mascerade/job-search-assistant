@@ -73,6 +73,7 @@ class Profile(Strict):
     skills: list[SkillGroup]
     certifications: list[str] = []
     extra_facts: list[Fact] = []
+    declined_skills: list[str] = []  # skills Kojo said no to; never suggested again
 
     @model_validator(mode="after")
     def _check_facts(self) -> Profile:
@@ -99,6 +100,25 @@ class Profile(Strict):
 
     def all_skills(self) -> set[str]:
         return {item.lower() for group in self.skills for item in group.items}
+
+    def add_skill(self, skill: str, category: str) -> bool:
+        """Add a skill under `category` (or the first group if that category doesn't exist).
+        Returns False if the profile already has it."""
+        if skill.lower() in self.all_skills():
+            return False
+        group = next((g for g in self.skills if g.category.lower() == category.lower()), None)
+        if group is None:
+            group = self.skills[0] if self.skills else None
+        if group is None:
+            self.skills.append(SkillGroup(category=category or "Skills", items=[skill]))
+        else:
+            group.items.append(skill)
+        self.declined_skills = [s for s in self.declined_skills if s.lower() != skill.lower()]
+        return True
+
+    def decline_skill(self, skill: str) -> None:
+        if skill.lower() not in {s.lower() for s in self.declined_skills}:
+            self.declined_skills.append(skill)
 
 
 def load_profile(path: Path) -> Profile:

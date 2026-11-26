@@ -382,3 +382,18 @@ def update_task(
     task_id: str, step: Literal["writing", "rendering", "ready", "error"], error: str | None = None
 ) -> None:
     client().table("tasks").update({"step": step, "error": error}).eq("id", task_id).execute()
+
+
+def unreviewed_jobs() -> list[JobForScoring]:
+    """Jobs waiting for approval where Kojo hasn't decided any suggestion yet (safe to redo)."""
+    jobs = _rows(
+        client().table("jobs").select(_SCORING_COLUMNS).eq("pipeline_state", "needs_approval").execute().data,
+        JobForScoring,
+    )
+    out = []
+    for job in jobs:
+        docs = latest_documents(job.id)
+        decisions = suggestion_decisions([d.id for d in docs.values()]) if docs else []
+        if all(d.decision == "pending" for d in decisions):
+            out.append(job)
+    return out

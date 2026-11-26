@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 Template = Literal["technical", "admin"]
 
@@ -32,6 +32,15 @@ class EntryBlock(BaseModel):
     bullets: list[Line] = Field(min_length=1, max_length=6)
 
 
+class SkillSuggestion(BaseModel):
+    """A skill the posting wants that isn't in the profile yet."""
+
+    skill: str
+    category: str = ""  # the profile skill group it belongs in
+    obvious: bool = False  # the profile makes it near-certain (e.g. SQL given PostgreSQL)
+    basis: str = ""  # which profile items imply it
+
+
 class SkillLine(BaseModel):
     category: str
     items: list[str] = Field(min_length=1)
@@ -44,7 +53,13 @@ class ResumeContent(BaseModel):
     experience: list[EntryBlock] = Field(default_factory=list)
     projects: list[EntryBlock] = Field(default_factory=list)
     skills: list[SkillLine] = Field(default_factory=list)
-    suggested_skills: list[str] = Field(default_factory=list)  # not in the profile; need approval
+    suggested_skills: list[SkillSuggestion] = Field(default_factory=list)
+
+    @field_validator("suggested_skills", mode="before")
+    @classmethod
+    def _old_format(cls, v: object) -> object:
+        # Version-1 documents stored plain strings.
+        return [{"skill": s} if isinstance(s, str) else s for s in v] if isinstance(v, list) else v
 
 
 class CoverLetterContent(BaseModel):
@@ -123,7 +138,21 @@ TAILOR_SCHEMA: dict[str, Any] = {
                         },
                     },
                 },
-                "suggested_skills": {"type": "array", "items": {"type": "string"}, "maxItems": 3},
+                "suggested_skills": {
+                    "type": "array",
+                    "maxItems": 4,
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["skill", "category", "obvious", "basis"],
+                        "properties": {
+                            "skill": {"type": "string"},
+                            "category": {"type": "string"},
+                            "obvious": {"type": "boolean"},
+                            "basis": {"type": "string"},
+                        },
+                    },
+                },
             },
         },
         "cover_letter": {

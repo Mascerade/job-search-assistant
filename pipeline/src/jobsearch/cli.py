@@ -290,6 +290,19 @@ def _cmd_tailor(args: argparse.Namespace) -> int:
         state = "rendered" if res.rendered else f"{res.suggestions} suggestions waiting for your approval"
         print(f"Tailored {job.title} — {job.company}: {state}")
         return 0
+    if args.redo_unreviewed:
+        row = db.latest_profile()
+        if row is None:
+            print("No master profile uploaded yet.")
+            return 1
+        profile = Profile.model_validate(row.data)
+        jobs = db.unreviewed_jobs()[: args.limit] if args.limit else db.unreviewed_jobs()
+        print(f"Re-tailoring {len(jobs)} jobs you haven't started reviewing…")
+        for job in jobs:
+            res = tailor_job(job, profile)
+            state = "ready" if res.rendered else f"{res.suggestions} to review"
+            print(f"  {job.title} — {job.company}: {state}")
+        return 0
     limit = args.limit if args.limit is not None else db.load_settings().tailor_daily_cap
     s = run_tailoring(limit=limit, dry_run=args.dry_run)
     _print_tailoring(s)
@@ -357,6 +370,11 @@ def build_parser() -> argparse.ArgumentParser:
     tl.add_argument("--job", help="tailor just this job id")
     tl.add_argument("--limit", type=int, help="how many jobs (default: the daily cap in Settings)")
     tl.add_argument("--dry-run", action="store_true", help="show how many jobs would be tailored")
+    tl.add_argument(
+        "--redo-unreviewed",
+        action="store_true",
+        help="re-tailor jobs whose suggestions you haven't touched yet",
+    )
     tl.set_defaults(func=_cmd_tailor)
 
     rn = sub.add_parser("render", help="rebuild a job's PDFs after approving its suggestions")
