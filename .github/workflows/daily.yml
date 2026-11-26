@@ -26,7 +26,8 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
       - name: Fetch, filter, and save jobs
-        run: uv run jobsearch daily
+        # Workday boards block cloud IPs; the daily job on Kojo's Mac fetches those (--where local).
+        run: uv run jobsearch daily --where cloud
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}

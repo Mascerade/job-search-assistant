@@ -238,3 +238,11 @@ def test_dedupe_key_ignores_location_suffix_in_title() -> None:
     a = posting(title="Software Engineer - Boston", locations=["Boston, MA"])
     b = posting(title="Software Engineer (Hybrid)", locations=["Boston, MA, United States"])
     assert dedupe_key(a) == dedupe_key(b) == "acme|software engineer|boston"
+
+
+def test_workday_boards_run_locally_everything_else_in_the_cloud() -> None:
+    from jobsearch.daily import load_boards, runs_where
+
+    boards = load_boards()
+    assert {runs_where(b) for b in boards if b.ats == "workday"} == {"local"}
+    assert {runs_where(b) for b in boards if b.ats != "workday"} == {"cloud"}

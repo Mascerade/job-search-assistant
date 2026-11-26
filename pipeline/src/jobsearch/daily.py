@@ -11,7 +11,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, get_args
+from typing import TYPE_CHECKING, Literal, get_args
 
 import yaml
 
@@ -27,6 +27,15 @@ if TYPE_CHECKING:
 log = logging.getLogger("jobsearch.daily")
 
 SOURCES_FILE = REPO_DIR / "config" / "sources.yaml"
+
+Where = Literal["all", "cloud", "local"]
+# Workday answers cloud servers (GitHub Actions) with persistent 429s but works fine from
+# a home connection, so those boards are fetched by the daily job on Kojo's Mac.
+LOCAL_ONLY_ATS: frozenset[Ats] = frozenset({"workday"})
+
+
+def runs_where(board: Board) -> Literal["cloud", "local"]:
+    return "local" if board.ats in LOCAL_ONLY_ATS else "cloud"
 
 
 def load_boards(path: Path = SOURCES_FILE) -> list[Board]:
@@ -125,13 +134,17 @@ class RunSummary:
     errors: list[str]
 
 
-def run_daily(*, dry_run: bool = False, only: list[str] | None = None, workers: int = 4) -> RunSummary:
+def run_daily(
+    *, dry_run: bool = False, only: list[str] | None = None, where: Where = "all", workers: int = 4
+) -> RunSummary:
     from . import db  # imported lazily so --help works without credentials
 
     settings = db.load_settings()
     boards = load_boards()
     if only:
         boards = [b for b in boards if b.key in only or b.token in only or b.company in only]
+    if where != "all":
+        boards = [b for b in boards if runs_where(b) == where]
     run_id = None if dry_run else db.start_run("daily")
     http = Http()
     counts: Counter[str] = Counter()

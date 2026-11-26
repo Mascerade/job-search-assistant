@@ -86,7 +86,7 @@ def _cmd_profile_pull(_args: argparse.Namespace) -> int:
 def _cmd_daily(args: argparse.Namespace) -> int:
     from .daily import run_daily
 
-    summary = run_daily(dry_run=args.dry_run, only=args.only or None)
+    summary = run_daily(dry_run=args.dry_run, only=args.only or None, where=args.where)
     c = summary.counts
     print(
         f"Boards: {c['boards_ok']} ok, {c['boards_failed']} failed | postings fetched: {c['fetched']} | "
@@ -116,6 +116,12 @@ def build_parser() -> argparse.ArgumentParser:
     daily = sub.add_parser("daily", help="run the daily job feed")
     daily.add_argument("--dry-run", action="store_true", help="fetch and filter, but write nothing")
     daily.add_argument("--only", nargs="*", help="limit to boards by token, key, or company name")
+    daily.add_argument(
+        "--where",
+        choices=["all", "cloud", "local"],
+        default="all",
+        help="cloud = boards GitHub Actions can reach; local = Workday boards (run on your Mac)",
+    )
     daily.add_argument("--show", type=int, default=60, help="how many kept jobs to list in a dry run")
     daily.set_defaults(func=_cmd_daily)
 
