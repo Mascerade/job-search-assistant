@@ -6,7 +6,7 @@ The website inserts a row into `tasks` (Tailor now / Regenerate / build PDFs). T
 process keeps a websocket open to Supabase Realtime; every INSERT on `tasks` wakes it
 up, and it runs process_tasks() right away. As safety nets it also:
   - processes anything already queued when it starts (e.g. after the Mac wakes up),
-  - sweeps every few minutes in case an event was missed,
+  - sweeps every minute in case an event was missed (e.g. during a reconnect),
   - exits if the connection is lost for good, so launchd (KeepAlive) restarts it.
 
 Tasks are claimed atomically (queued → working) before processing, so a task is
@@ -27,7 +27,7 @@ from .config import load_config
 
 log = logging.getLogger("jobsearch.listener")
 
-SWEEP_SECONDS = 300
+SWEEP_SECONDS = 60
 BATCH = 10
 
 
