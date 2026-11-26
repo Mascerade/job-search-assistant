@@ -99,7 +99,7 @@ function SortIcon({ dir }: { dir: false | 'asc' | 'desc' }) {
 export function TodayPage() {
   const { data: jobs, isLoading, error } = useJobs()
   const navigate = useNavigate()
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'first_seen_at', desc: true }])
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'fit_score', desc: true }])
   const rows = useMemo(() => (jobs ?? []).filter(needsReview), [jobs])
   const filtered = useMemo(() => (jobs ?? []).filter((j) => isAutoRejected(j) && !j.closed_at), [jobs])
   const [showFiltered, setShowFiltered] = useState(false)
@@ -116,7 +116,7 @@ export function TodayPage() {
     <>
       <PageHeader
         title="Today"
-        description="Jobs waiting for your decision. Once the daily search is running, new matches land here every morning."
+        description="New matches, best fit first. The daily search adds jobs each morning and your Mac scores them."
         actions={
           <Button asChild>
             <Link to="/add">
@@ -246,7 +246,7 @@ export function TodayPage() {
             onClick={() => setShowFiltered((v) => !v)}
           >
             {showFiltered ? <ChevronDown data-icon="inline-start" /> : <ChevronRight data-icon="inline-start" />}
-            {showFiltered ? 'Hide' : 'Show'} {filtered.length} filtered out
+            {showFiltered ? 'Hide' : 'Show'} {filtered.length} filtered out or below your fit threshold
           </Button>
           {showFiltered && (
             <ul id="filtered-jobs" className="mt-2 flex flex-col divide-y rounded-xl border bg-card">
@@ -256,7 +256,11 @@ export function TodayPage() {
                     <span className="font-medium">{job.title}</span>
                     <span className="text-muted-foreground"> · {job.company}</span>
                   </Link>
-                  <span className="text-sm text-muted-foreground">{job.filter_reason ?? 'Filtered'}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {job.pipeline_state === 'below_threshold' && job.fit_score !== null
+                      ? `Fit ${job.fit_score}: ${job.fit_reason ?? 'below your threshold'}`
+                      : (job.filter_reason ?? 'Filtered')}
+                  </span>
                 </li>
               ))}
             </ul>

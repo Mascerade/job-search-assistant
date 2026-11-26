@@ -22,7 +22,7 @@ from .models import Ats, Board, JobRow, Posting, Settings
 from .sources import enrich, fetch
 
 if TYPE_CHECKING:
-    from .db import RunStatus
+    from .db import RunKind, RunStatus
 
 log = logging.getLogger("jobsearch.daily")
 
@@ -135,7 +135,12 @@ class RunSummary:
 
 
 def run_daily(
-    *, dry_run: bool = False, only: list[str] | None = None, where: Where = "all", workers: int = 4
+    *,
+    dry_run: bool = False,
+    only: list[str] | None = None,
+    where: Where = "all",
+    workers: int = 4,
+    kind: RunKind = "daily",
 ) -> RunSummary:
     from . import db  # imported lazily so --help works without credentials
 
@@ -145,7 +150,7 @@ def run_daily(
         boards = [b for b in boards if b.key in only or b.token in only or b.company in only]
     if where != "all":
         boards = [b for b in boards if runs_where(b) == where]
-    run_id = None if dry_run else db.start_run("daily")
+    run_id = None if dry_run else db.start_run(kind)
     http = Http()
     counts: Counter[str] = Counter()
     errors: list[str] = []

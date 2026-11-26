@@ -18,8 +18,9 @@ from supabase import Client, create_client
 
 from .config import load_config
 from .models import JobRow, Settings
+from .scoring import JobForScoring
 
-RunKind = Literal["daily", "on_demand"]
+RunKind = Literal["daily", "local", "scoring", "on_demand"]
 RunStatus = Literal["running", "succeeded", "failed"]
 
 
@@ -131,9 +132,22 @@ def start_run(kind: RunKind) -> str:
     return _first(client().table("runs").insert({"kind": kind}).execute().data, _IdRow).id
 
 
-def finish_run(run_id: str, *, status: RunStatus, counts: dict[str, int], error: str | None = None) -> None:
+def finish_run(
+    run_id: str,
+    *,
+    status: RunStatus,
+    counts: dict[str, int],
+    error: str | None = None,
+    cost_usd: float = 0.0,
+) -> None:
     client().table("runs").update(
-        {"status": status, "counts": counts, "error": error, "finished_at": datetime.now(UTC).isoformat()}
+        {
+            "status": status,
+            "counts": counts,
+            "error": error,
+            "cost_usd": round(cost_usd, 5),
+            "finished_at": datetime.now(UTC).isoformat(),
+        }
     ).eq("id", run_id).execute()
 
 
@@ -153,3 +167,79 @@ def close_missing(board_key: str, seen_ids: list[str]) -> int:
     """Mark postings closed that are no longer on `board_key`; returns how many."""
     resp = client().rpc("close_missing_postings", {"board": board_key, "seen_ids": seen_ids}).execute()
     return TypeAdapter(int).validate_python(resp.data)
+
+
+# ---------------------------------------------------------------------------
+# Scoring (milestone 3)
+# ---------------------------------------------------------------------------
+
+_SCORING_COLUMNS = (
+    "id, company, title, location, remote_type, employment_type, salary_min, salary_max, track, description"
+)
+
+
+def jobs_to_score(limit: int | None = None) -> list[JobForScoring]:
+    """Open jobs that passed the filters and haven't been scored yet, newest first."""
+    query = (
+        client()
+        .table("jobs")
+        .select(_SCORING_COLUMNS)
+        .eq("pipeline_state", "new")
+        .is_("fit_score", "null")
+        .is_("closed_at", "null")
+        .order("first_seen_at", desc=True)
+    )
+    if limit is not None:
+        query = query.limit(limit)
+    return _rows(query.execute().data, JobForScoring)
+
+
+def record_scores(rows: list[dict[str, Any]]) -> int:
+    resp = client().rpc("record_scores", {"scores": rows}).execute()
+    return TypeAdapter(int).validate_python(resp.data)
+
+
+class _CostRow(BaseModel):
+    cost_usd: float
+
+
+def month_cost(now: datetime | None = None) -> float:
+    """Estimated AI cost logged on runs since the start of this month."""
+    now = now or datetime.now(UTC)
+    start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    data = client().table("runs").select("cost_usd").gte("started_at", start.isoformat()).execute().data
+    return sum(r.cost_usd for r in _rows(data, _CostRow))
+
+
+# ---------------------------------------------------------------------------
+# Evaluation set
+# ---------------------------------------------------------------------------
+
+
+def eval_candidates() -> list[JobForScoring]:
+    """Open jobs that passed the hard filters (scored or not), for labeling."""
+    data = (
+        client()
+        .table("jobs")
+        .select(_SCORING_COLUMNS)
+        .in_("pipeline_state", ["new", "scored", "below_threshold"])
+        .is_("closed_at", "null")
+        .execute()
+        .data
+    )
+    return _rows(data, JobForScoring)
+
+
+def jobs_by_ids(ids: list[str]) -> list[JobForScoring]:
+    data = client().table("jobs").select(_SCORING_COLUMNS).in_("id", ids).execute().data
+    return _rows(data, JobForScoring)
+
+
+class _UrlRow(BaseModel):
+    id: str
+    url: str | None
+
+
+def job_urls(ids: list[str]) -> dict[str, str | None]:
+    data = client().table("jobs").select("id, url").in_("id", ids).execute().data
+    return {r.id: r.url for r in _rows(data, _UrlRow)}

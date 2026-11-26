@@ -12,6 +12,7 @@ export function needsReview(job: Job): boolean {
 
 export const TAG_LABEL: Record<string, string> = {
   'location-unclear': 'Location unclear',
+  'immediate-start': 'Wants someone soon',
 }
 
 const AGGREGATORS: Partial<Record<Job['source'], string>> = {

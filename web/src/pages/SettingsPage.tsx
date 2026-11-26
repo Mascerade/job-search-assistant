@@ -187,7 +187,7 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
           <CardContent className="grid gap-6 sm:grid-cols-3">
             {numberField('fit_threshold', 'Fit score threshold', 'Lower it for more matches, raise it for fewer.', '/ 100')}
             {numberField('experience_max_years', 'Max years of experience asked', 'Postings asking for more are skipped.', 'years')}
-            {numberField('monthly_spend_cap_usd', 'Monthly AI spending cap', 'Tailoring pauses when this is reached.', 'USD')}
+            {numberField('monthly_spend_cap_usd', 'Monthly AI usage cap', "AI steps pause when this month's estimated API value reaches it (free on your Claude plan).", 'USD')}
           </CardContent>
           <CardContent className="flex flex-col gap-4 border-t pt-4">
             <Toggle id="full_time_only" label="Full-time only" hint="Skip contract, temporary, part-time, and internship roles." checked={form.full_time_only} onChange={(v) => patch({ full_time_only: v })} />

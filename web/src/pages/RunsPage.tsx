@@ -13,6 +13,13 @@ const RUN_STATUS: Record<Run['status'], { label: string; icon: typeof Activity; 
   failed: { label: 'Failed', icon: CircleAlert, className: 'text-destructive' },
 }
 
+const RUN_KIND: Record<string, string> = {
+  daily: 'Daily feed (cloud)',
+  local: 'Workday feed (Mac)',
+  scoring: 'AI scoring (Mac)',
+  on_demand: 'On demand',
+}
+
 export function RunsPage() {
   const { data: runs, isLoading } = useRuns()
   const [monthStart] = useState(() => {
@@ -29,7 +36,8 @@ export function RunsPage() {
         title="Runs & spend"
         description={
           <>
-            AI spending this month: <span className="font-mono font-medium tabular-nums text-foreground">{formatUsd(monthSpend)}</span>
+            AI usage this month: <span className="font-mono font-medium tabular-nums text-foreground">{formatUsd(monthSpend)}</span>{' '}
+            estimated API value. It's free on your Claude plan; the cap in Settings keeps usage modest.
           </>
         }
       />
@@ -48,7 +56,7 @@ export function RunsPage() {
                 <TableHead>Kind</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Counts</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
+                <TableHead className="text-right">Est. AI value</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -58,7 +66,7 @@ export function RunsPage() {
                 return (
                   <TableRow key={r.id}>
                     <TableCell className="font-mono text-sm tabular-nums">{formatDateTime(r.started_at)}</TableCell>
-                    <TableCell className="text-sm">{r.kind === 'daily' ? 'Daily' : 'On demand'}</TableCell>
+                    <TableCell className="text-sm">{RUN_KIND[r.kind] ?? r.kind}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center gap-1.5 text-sm ${s.className}`}>
                         <Icon className="size-4" aria-hidden="true" />

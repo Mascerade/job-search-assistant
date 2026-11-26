@@ -9,6 +9,7 @@ import {
   Pencil,
   Sparkles,
   Trash2,
+  TriangleAlert,
   UserPlus,
   Wallet,
   X,
@@ -38,7 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { formatDateTime, formatRelative, formatSalary } from '@/lib/format'
-import { useDeleteJob, useJob, useStatusHistory, useUpdateJob } from '@/lib/queries'
+import { useDeleteJob, useJob, useLatestScore, useStatusHistory, useUpdateJob } from '@/lib/queries'
 import { sourceLabel, TAG_LABEL } from '@/lib/jobs'
 import { STATUS, TRACK_LABEL } from '@/lib/status'
 import type { Contact, Job } from '@/lib/types'
@@ -56,6 +57,47 @@ function toFormValues(job: Job): JobFormValues {
     salary_max: job.salary_max?.toString() ?? '',
     description: job.description ?? '',
   }
+}
+
+function FitCard({ job }: { job: Job }) {
+  const { data: score } = useLatestScore(job.id)
+  const concerns = score?.details.concerns ?? []
+  const years = score?.details.years_required
+  return (
+    <Card className="mb-6">
+      <CardContent className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-4 text-primary" aria-hidden="true" />
+            <span className="text-sm font-medium">Fit</span>
+            <FitScore score={job.fit_score} />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {job.fit_reason ?? 'Not scored yet. Your Mac scores new jobs each morning.'}
+          </p>
+        </div>
+        {(concerns.length > 0 || (years !== undefined && years !== null)) && (
+          <div className="border-t pt-3">
+            <h2 className="mb-1.5 text-xs font-medium tracking-wide text-muted-foreground uppercase">Watch out for</h2>
+            <ul className="flex flex-col gap-1 text-sm">
+              {years !== undefined && years !== null && (
+                <li className="flex items-start gap-2">
+                  <CalendarClock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  Asks for {years === 0 ? 'no prior' : `${years}+ years of`} experience
+                </li>
+              )}
+              {concerns.map((c) => (
+                <li key={c} className="flex items-start gap-2">
+                  <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning-text" aria-hidden="true" />
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
 }
 
 function NotesCard({ job }: { job: Job }) {
@@ -356,18 +398,7 @@ export function JobDetailPage() {
         </p>
       )}
 
-      <Card className="mb-6">
-        <CardContent className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-primary" aria-hidden="true" />
-            <span className="text-sm font-medium">Fit</span>
-            <FitScore score={job.fit_score} />
-          </div>
-          <p className="text-sm text-muted-foreground">
-            {job.fit_reason ?? 'Automatic scoring arrives in milestone 3.'}
-          </p>
-        </CardContent>
-      </Card>
+      <FitCard job={job} />
 
       <Tabs defaultValue="posting">
         <TabsList className="mb-4 grid w-full grid-cols-4 sm:w-fit">

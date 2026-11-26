@@ -11,6 +11,7 @@ export const keys = {
   jobs: ['jobs'] as const,
   job: (id: string) => ['jobs', id] as const,
   history: (id: string) => ['jobs', id, 'history'] as const,
+  score: (id: string) => ['jobs', id, 'score'] as const,
   settings: ['settings'] as const,
   profile: ['profile'] as const,
   profileVersions: ['profile', 'versions'] as const,
@@ -119,6 +120,31 @@ export function useDeleteJob() {
       if (error) throw new Error(error.message)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.jobs }),
+  })
+}
+
+export interface ScoreDetails {
+  years_required?: number | null
+  immediate_start?: boolean
+  concerns?: string[]
+}
+
+/** The most recent AI score for a job (reason + structured details), if any. */
+export function useLatestScore(jobId: string) {
+  return useQuery({
+    queryKey: keys.score(jobId),
+    queryFn: async () => {
+      const row = unwrapMaybe(
+        await supabase
+          .from('scores')
+          .select('score, reason, model, details, created_at')
+          .eq('job_id', jobId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      )
+      return row ? { ...row, details: (row.details ?? {}) as ScoreDetails } : null
+    },
   })
 }
 
