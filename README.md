@@ -117,3 +117,4 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 3. AI scoring with Claude Haiku 5.5, spend cap, labeled eval set
 4. Tailoring with Claude Opus 5.5, fact verification, DOCX/PDF rendering, approvals
 5. Morning digest email, job-board APIs, HigherEdJobs, cleanup
+6. Apply assist (optional): Claude fills application forms in your browser and stops before Submit for your review
