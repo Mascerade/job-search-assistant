@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   CalendarClock,
+  CircleOff,
   ExternalLink,
   FileText,
   History,
@@ -38,6 +39,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { formatDateTime, formatRelative, formatSalary } from '@/lib/format'
 import { useDeleteJob, useJob, useStatusHistory, useUpdateJob } from '@/lib/queries'
+import { sourceLabel, TAG_LABEL } from '@/lib/jobs'
 import { STATUS, TRACK_LABEL } from '@/lib/status'
 import type { Contact, Job } from '@/lib/types'
 
@@ -286,9 +288,15 @@ export function JobDetailPage() {
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <StatusBadge status={job.status} />
             {job.track && <span className="text-xs text-muted-foreground">{TRACK_LABEL[job.track]}</span>}
+            {job.closed_at && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-status-closed-bg px-2.5 py-0.5 text-xs font-medium text-status-closed">
+                <CircleOff className="size-3.5" aria-hidden="true" />
+                Posting closed
+              </span>
+            )}
             {job.tags.map((t) => (
               <span key={t} className="rounded-full border px-2 py-0.5 text-xs">
-                {t}
+                {TAG_LABEL[t] ?? t}
               </span>
             ))}
           </div>
@@ -312,7 +320,10 @@ export function JobDetailPage() {
             <div className="inline-flex items-center gap-1.5">
               <CalendarClock className="size-4" aria-hidden="true" />
               <dt className="sr-only">Found</dt>
-              <dd>Found {formatRelative(job.first_seen_at)}</dd>
+              <dd>
+                Found {formatRelative(job.first_seen_at)}
+                {sourceLabel(job) && ` on ${sourceLabel(job)}`}
+              </dd>
             </div>
           </dl>
         </div>
@@ -337,6 +348,13 @@ export function JobDetailPage() {
           </Button>
         </div>
       </header>
+
+      {job.pipeline_state === 'filtered_out' && (
+        <p role="note" className="mb-4 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
+          The daily search filtered this job out: <span className="font-medium text-foreground">{job.filter_reason}</span>.
+          It stays off Today and the Board unless you move it yourself.
+        </p>
+      )}
 
       <Card className="mb-6">
         <CardContent className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">

@@ -8,7 +8,7 @@ import {
   useTable,
   type SortingState,
 } from '@tanstack/react-table'
-import { ArrowDown, ArrowUp, ArrowUpDown, Inbox, MapPin, Plus } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight, Inbox, MapPin, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { EmptyState, PageHeader } from '@/components/EmptyState'
@@ -20,12 +20,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useJobs } from '@/lib/queries'
 import { TRACK_LABEL } from '@/lib/status'
 import type { Job } from '@/lib/types'
-import { formatRelative } from '@/lib/format'
-
-/** Jobs still waiting for a decision: everything in "New" or "Docs ready". */
-function needsReview(job: Job) {
-  return job.status === 'new' || job.status === 'docs_ready'
-}
+import { formatRelative, shortLocation } from '@/lib/format'
+import { isAutoRejected, needsReview } from '@/lib/jobs'
 
 const features = tableFeatures({
   rowSortingFeature,
@@ -48,7 +44,7 @@ const columns = helper.columns([
     header: 'Role',
     sortFn: 'alphanumeric',
     cell: ({ row }) => (
-      <div className="min-w-0">
+      <div className="min-w-48">
         <Link
           to={`/jobs/${row.original.id}`}
           className="font-medium text-foreground underline-offset-4 hover:underline"
@@ -64,8 +60,8 @@ const columns = helper.columns([
     header: 'Location',
     sortFn: 'alphanumeric',
     cell: ({ row }) => (
-      <span className="text-sm">
-        {row.original.location ?? '—'}
+      <span className="text-sm" title={row.original.location ?? undefined}>
+        {shortLocation(row.original.location)}
         {row.original.remote_type && row.original.remote_type !== 'onsite' && (
           <span className="text-muted-foreground"> · {row.original.remote_type}</span>
         )}
@@ -105,6 +101,8 @@ export function TodayPage() {
   const navigate = useNavigate()
   const [sorting, setSorting] = useState<SortingState>([{ id: 'first_seen_at', desc: true }])
   const rows = useMemo(() => (jobs ?? []).filter(needsReview), [jobs])
+  const filtered = useMemo(() => (jobs ?? []).filter((j) => isAutoRejected(j) && !j.closed_at), [jobs])
+  const [showFiltered, setShowFiltered] = useState(false)
 
   const table = useTable({
     features,
@@ -175,7 +173,7 @@ export function TodayPage() {
                     {job.location && (
                       <span className="inline-flex items-center gap-1 text-muted-foreground">
                         <MapPin className="size-3.5" aria-hidden="true" />
-                        {job.location}
+                        {shortLocation(job.location)}
                       </span>
                     )}
                   </div>
@@ -184,7 +182,7 @@ export function TodayPage() {
             ))}
           </ul>
 
-          <div className="hidden overflow-hidden rounded-xl border bg-card md:block">
+          <div className="hidden overflow-x-auto rounded-xl border bg-card md:block">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((hg) => (
@@ -226,7 +224,7 @@ export function TodayPage() {
                     }}
                   >
                     {row.getAllCells().map((cell) => (
-                      <TableCell key={cell.id} className="py-3">
+                      <TableCell key={cell.id} className="py-3 whitespace-normal">
                         <table.FlexRender cell={cell} />
                       </TableCell>
                     ))}
@@ -236,6 +234,34 @@ export function TodayPage() {
             </Table>
           </div>
         </>
+      )}
+
+      {filtered.length > 0 && (
+        <section className="mt-8">
+          <Button
+            variant="ghost"
+            className="-ml-2 text-muted-foreground"
+            aria-expanded={showFiltered}
+            aria-controls="filtered-jobs"
+            onClick={() => setShowFiltered((v) => !v)}
+          >
+            {showFiltered ? <ChevronDown data-icon="inline-start" /> : <ChevronRight data-icon="inline-start" />}
+            {showFiltered ? 'Hide' : 'Show'} {filtered.length} filtered out
+          </Button>
+          {showFiltered && (
+            <ul id="filtered-jobs" className="mt-2 flex flex-col divide-y rounded-xl border bg-card">
+              {filtered.map((job) => (
+                <li key={job.id} className="flex flex-col gap-0.5 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
+                  <Link to={`/jobs/${job.id}`} className="min-w-0 flex-1 underline-offset-4 hover:underline">
+                    <span className="font-medium">{job.title}</span>
+                    <span className="text-muted-foreground"> · {job.company}</span>
+                  </Link>
+                  <span className="text-sm text-muted-foreground">{job.filter_reason ?? 'Filtered'}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       )}
     </>
   )

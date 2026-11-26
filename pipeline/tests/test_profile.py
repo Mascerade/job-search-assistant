@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -9,45 +10,46 @@ from jobsearch.profile import Profile, load_profile
 FIXTURE = Path(__file__).parent / "fixtures" / "profile_example.yaml"
 
 
-def example() -> dict:
-    return yaml.safe_load(FIXTURE.read_text())
+def example() -> dict[str, Any]:
+    data: dict[str, Any] = yaml.safe_load(FIXTURE.read_text())
+    return data
 
 
-def test_example_profile_is_valid():
+def test_example_profile_is_valid() -> None:
     profile = load_profile(FIXTURE)
     assert set(profile.fact_index()) == {"acme-api", "weather-bot"}
     assert "python" in profile.all_skills()
 
 
-def test_placeholder_is_rejected():
+def test_placeholder_is_rejected() -> None:
     data = example()
     data["experience"][0]["facts"][0]["text"] = "Cut review time [by X%]."
     with pytest.raises(ValidationError, match="placeholder"):
         Profile.model_validate(data)
 
 
-def test_duplicate_fact_ids_are_rejected():
+def test_duplicate_fact_ids_are_rejected() -> None:
     data = example()
     data["projects"][0]["facts"][0]["id"] = "acme-api"
     with pytest.raises(ValidationError, match="duplicate fact id"):
         Profile.model_validate(data)
 
 
-def test_unknown_keys_are_rejected():
+def test_unknown_keys_are_rejected() -> None:
     data = example()
     data["contact"]["nickname"] = "Al"
     with pytest.raises(ValidationError):
         Profile.model_validate(data)
 
 
-def test_fact_ids_must_be_slugs():
+def test_fact_ids_must_be_slugs() -> None:
     data = example()
     data["experience"][0]["facts"][0]["id"] = "Acme API"
     with pytest.raises(ValidationError):
         Profile.model_validate(data)
 
 
-def test_extra_facts_count_as_facts():
+def test_extra_facts_count_as_facts() -> None:
     data = example()
     data["extra_facts"] = [{"id": "volunteer-tutor", "text": "Tutored middle schoolers in math."}]
     assert "volunteer-tutor" in Profile.model_validate(data).fact_index()

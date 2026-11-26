@@ -1,0 +1,58 @@
+{
+ "total": 480,
+ "jobPostings": [
+  {
+   "title": "Senior IT Business Analyst",
+   "externalPath": "/job/Boston-MA-Main-Campus/Senior-IT-Business-Analyst_R140084",
+   "locationsText": "Boston, MA (Main Campus)",
+   "postedOn": "Posted Yesterday",
+   "bulletFields": [
+    "R140084"
+   ]
+  },
+  {
+   "title": "MIE Part-time Lecturer- Aerospace Program (Seattle)",
+   "externalPath": "/job/Seattle-WA/MIE-Part-time-Lecturer--Aerospace-Program--Seattle-_R138997",
+   "locationsText": "Seattle, WA",
+   "postedOn": "Posted 30+ Days Ago",
+   "bulletFields": [
+    "R138997"
+   ]
+  }
+ ],
+ "facets": [
+  {
+   "facetParameter": "jobFamily",
+   "descriptor": "Job Category",
+   "values": [
+    {
+     "descriptor": "Part Time Faculty",
+     "id": "d1f0c548f4110101fee8d7eae3a70000",
+     "count": 152
+    },
+    {
+     "descriptor": "Postdoctoral",
+     "id": "b874e5b0937c1001968ea5e249fb0000",
+     "count": 72
+    }
+   ]
+  },
+  {
+   "facetParameter": "workerSubType",
+   "descriptor": "Employment Type",
+   "values": [
+    {
+     "descriptor": "Fixed Term (Fixed Term)",
+     "id": "21d56011f4eb010027b9622f86f80001",
+     "count": 270
+    },
+    {
+     "descriptor": "Regular",
+     "id": "21d56011f4eb010027b961956a850001",
+     "count": 178
+    }
+   ]
+  }
+ ],
+ "userAuthenticated": false
+}

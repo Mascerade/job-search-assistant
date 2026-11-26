@@ -28,3 +28,25 @@ export function formatSalary(min: number | null, max: number | null): string | n
   if (min !== null && max !== null) return `${money.format(min)}–${money.format(max)}`
   return min !== null ? `from ${money.format(min)}` : `up to ${money.format(max as number)}`
 }
+
+const STATES: Record<string, string> = { massachusetts: 'MA', 'new york': 'NY', 'new hampshire': 'NH', 'rhode island': 'RI' }
+
+/**
+ * Compact location for lists: "25 Buick St, Administrative Offices, Boston, Massachusetts, United States"
+ * → "Boston, MA"; several locations → "Boston, MA +1". The job page shows the full text.
+ */
+export function shortLocation(location: string | null): string {
+  if (!location) return '—'
+  const all = location.split(';').map((l) => l.trim()).filter(Boolean)
+  const first = (all[0] ?? '').replace(/\s*Job Posting Location$/i, '')
+  const parts = first.split(',').map((p) => p.trim()).filter((p) => p && !/^(united states|usa|us)$/i.test(p))
+  const stateIdx = parts.findIndex((p) => /^[A-Z]{2}$/.test(p) || p.toLowerCase() in STATES)
+  let short = first
+  if (stateIdx > 0) {
+    const state = parts[stateIdx]
+    short = `${parts[stateIdx - 1]}, ${STATES[state.toLowerCase()] ?? state}`
+  } else if (parts.length > 2) {
+    short = parts.slice(-2).join(', ')
+  }
+  return all.length > 1 ? `${short} +${all.length - 1}` : short
+}

@@ -59,14 +59,14 @@ isOneToOne: false
                   ]
                 },"jobs": {
                   Row: {
-                    "applied_at": string | null,"closed_at": string | null,"company": string,"contacts": NonNullable<Json>,"created_at": string,"dedupe_key": string | null,"description": string | null,"employment_type": string | null,"filter_reason": string | null,"first_seen_at": string,"fit_reason": string | null,"fit_score": number | null,"id": string,"last_seen_at": string,"location": string | null,"notes": string,"pipeline_state": Database["public"]['Enums']["pipeline_state"],"posted_at": string | null,"remote_type": string | null,"salary_max": number | null,"salary_min": number | null,"source": Database["public"]['Enums']["job_source"],"source_job_id": string | null,"status": Database["public"]['Enums']["application_status"],"tags": (string)[],"title": string,"track": Database["public"]['Enums']["job_track"] | null,"updated_at": string,"url": string | null
+                    "applied_at": string | null,"closed_at": string | null,"company": string,"contacts": NonNullable<Json>,"created_at": string,"dedupe_key": string | null,"description": string | null,"employment_type": string | null,"filter_reason": string | null,"first_seen_at": string,"fit_reason": string | null,"fit_score": number | null,"id": string,"last_seen_at": string,"location": string | null,"notes": string,"pipeline_state": Database["public"]['Enums']["pipeline_state"],"posted_at": string | null,"remote_type": string | null,"salary_max": number | null,"salary_min": number | null,"source": Database["public"]['Enums']["job_source"],"source_board": string | null,"source_job_id": string | null,"status": Database["public"]['Enums']["application_status"],"tags": (string)[],"title": string,"track": Database["public"]['Enums']["job_track"] | null,"updated_at": string,"url": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "applied_at"?: string | null,"closed_at"?: string | null,"company": string,"contacts"?: NonNullable<Json>,"created_at"?: string,"dedupe_key"?: string | null,"description"?: string | null,"employment_type"?: string | null,"filter_reason"?: string | null,"first_seen_at"?: string,"fit_reason"?: string | null,"fit_score"?: number | null,"id"?: string,"last_seen_at"?: string,"location"?: string | null,"notes"?: string,"pipeline_state"?: Database["public"]['Enums']["pipeline_state"],"posted_at"?: string | null,"remote_type"?: string | null,"salary_max"?: number | null,"salary_min"?: number | null,"source"?: Database["public"]['Enums']["job_source"],"source_job_id"?: string | null,"status"?: Database["public"]['Enums']["application_status"],"tags"?: (string)[],"title": string,"track"?: Database["public"]['Enums']["job_track"] | null,"updated_at"?: string,"url"?: string | null
+                    "applied_at"?: string | null,"closed_at"?: string | null,"company": string,"contacts"?: NonNullable<Json>,"created_at"?: string,"dedupe_key"?: string | null,"description"?: string | null,"employment_type"?: string | null,"filter_reason"?: string | null,"first_seen_at"?: string,"fit_reason"?: string | null,"fit_score"?: number | null,"id"?: string,"last_seen_at"?: string,"location"?: string | null,"notes"?: string,"pipeline_state"?: Database["public"]['Enums']["pipeline_state"],"posted_at"?: string | null,"remote_type"?: string | null,"salary_max"?: number | null,"salary_min"?: number | null,"source"?: Database["public"]['Enums']["job_source"],"source_board"?: string | null,"source_job_id"?: string | null,"status"?: Database["public"]['Enums']["application_status"],"tags"?: (string)[],"title": string,"track"?: Database["public"]['Enums']["job_track"] | null,"updated_at"?: string,"url"?: string | null
                   }
                   Update: {
-                    "applied_at"?: string | null,"closed_at"?: string | null,"company"?: string,"contacts"?: NonNullable<Json>,"created_at"?: string,"dedupe_key"?: string | null,"description"?: string | null,"employment_type"?: string | null,"filter_reason"?: string | null,"first_seen_at"?: string,"fit_reason"?: string | null,"fit_score"?: number | null,"id"?: string,"last_seen_at"?: string,"location"?: string | null,"notes"?: string,"pipeline_state"?: Database["public"]['Enums']["pipeline_state"],"posted_at"?: string | null,"remote_type"?: string | null,"salary_max"?: number | null,"salary_min"?: number | null,"source"?: Database["public"]['Enums']["job_source"],"source_job_id"?: string | null,"status"?: Database["public"]['Enums']["application_status"],"tags"?: (string)[],"title"?: string,"track"?: Database["public"]['Enums']["job_track"] | null,"updated_at"?: string,"url"?: string | null
+                    "applied_at"?: string | null,"closed_at"?: string | null,"company"?: string,"contacts"?: NonNullable<Json>,"created_at"?: string,"dedupe_key"?: string | null,"description"?: string | null,"employment_type"?: string | null,"filter_reason"?: string | null,"first_seen_at"?: string,"fit_reason"?: string | null,"fit_score"?: number | null,"id"?: string,"last_seen_at"?: string,"location"?: string | null,"notes"?: string,"pipeline_state"?: Database["public"]['Enums']["pipeline_state"],"posted_at"?: string | null,"remote_type"?: string | null,"salary_max"?: number | null,"salary_min"?: number | null,"source"?: Database["public"]['Enums']["job_source"],"source_board"?: string | null,"source_job_id"?: string | null,"status"?: Database["public"]['Enums']["application_status"],"tags"?: (string)[],"title"?: string,"track"?: Database["public"]['Enums']["job_track"] | null,"updated_at"?: string,"url"?: string | null
                   }
                   Relationships: [
                     
@@ -199,12 +199,18 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "is_owner":
+            "close_missing_postings":
+{ Args: { "board": string,"seen_ids": (string)[] }; Returns: number
+                           },
+"ingest_postings":
+{ Args: { "postings": Json }; Returns: Json
+                           },
+"is_owner":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            }
           }
           Enums: {
-            "application_status": "new"|"docs_ready"|"applied"|"interviewing"|"offer"|"rejected"|"withdrawn"|"not_interested","job_source": "manual"|"greenhouse"|"lever"|"ashby"|"workday"|"adzuna"|"jsearch"|"higheredjobs"|"other","job_track": "software"|"program_admin"|"hybrid","pipeline_state": "new"|"filtered_out"|"scored"|"below_threshold"|"tailoring"|"needs_approval"|"ready"|"error"
+            "application_status": "new"|"docs_ready"|"applied"|"interviewing"|"offer"|"rejected"|"withdrawn"|"not_interested","job_source": "manual"|"greenhouse"|"lever"|"ashby"|"workday"|"adzuna"|"jsearch"|"higheredjobs"|"other"|"smartrecruiters"|"jibe"|"silkroad"|"pageup"|"peopleclick","job_track": "software"|"program_admin"|"hybrid","pipeline_state": "new"|"filtered_out"|"scored"|"below_threshold"|"tailoring"|"needs_approval"|"ready"|"error"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -324,7 +330,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "application_status": ["new", "docs_ready", "applied", "interviewing", "offer", "rejected", "withdrawn", "not_interested"],"job_source": ["manual", "greenhouse", "lever", "ashby", "workday", "adzuna", "jsearch", "higheredjobs", "other"],"job_track": ["software", "program_admin", "hybrid"],"pipeline_state": ["new", "filtered_out", "scored", "below_threshold", "tailoring", "needs_approval", "ready", "error"]
+            "application_status": ["new", "docs_ready", "applied", "interviewing", "offer", "rejected", "withdrawn", "not_interested"],"job_source": ["manual", "greenhouse", "lever", "ashby", "workday", "adzuna", "jsearch", "higheredjobs", "other", "smartrecruiters", "jibe", "silkroad", "pageup", "peopleclick"],"job_track": ["software", "program_admin", "hybrid"],"pipeline_state": ["new", "filtered_out", "scored", "below_threshold", "tailoring", "needs_approval", "ready", "error"]
           }
         }
 } as const

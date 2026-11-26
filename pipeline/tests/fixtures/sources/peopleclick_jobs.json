@@ -1,0 +1,165 @@
+{
+ "totalHits": 2,
+ "hitsPerPage": 50,
+ "isSortAscending": false,
+ "sortField": "JPM_MODIFIEDON",
+ "jobList": [
+  {
+   "questionnaires": [],
+   "identity": {
+    "locale": "en_US",
+    "identityToken": "35257_en-us",
+    "id": 35257
+   },
+   "cri": {
+    "clientCode": "CLIENT_MIT",
+    "siteCode": "EXTERNAL",
+    "clientId": 700,
+    "sessionInfoKey": "CLIENT_MITEXTERNAL",
+    "validLocales": [
+     "en-us"
+    ],
+    "internalSite": false,
+    "clientUrlAlias": "client_mit",
+    "siteUrlAlias": "external",
+    "applicantSiteId": 2,
+    "locale": "en_US"
+   },
+   "jobPostId": 35257,
+   "jobPostLocaleAsString": "en-us",
+   "active": true,
+   "availableLocales": [
+    "en_US"
+   ],
+   "questionnaireRouteId": -1,
+   "reqCategories": [],
+   "reqSkills": [],
+   "jobPostLocale": "en_US",
+   "videos": null,
+   "dateFormatPattern": "yyyy-MM-dd'T'HH:mm:ss'Z'",
+   "attributes": {
+    "JPM_WORKENVIRONMENT": "",
+    "FLD_JP_POSTING_TITLE": "Technical Associate I",
+    "JPM_HOURSOFWORK": "40",
+    "JPM_CONTACTPHONE": "",
+    "JPM_POSTALCODE": "02139",
+    "JPM_TITLE": "Technical Associate I",
+    "FLD_JPM_DIVISION": "Engineering",
+    "JPM_REQID": "26267",
+    "FLD_JP_POSITION_CATEGORY": "Research - Engineering",
+    "JPM_EXPERIENCE": "Not Indicated",
+    "RANK": "1.0",
+    "JPM_HOURSOFWORKUNIT": "Week",
+    "JPM_SALARYLOW": "0.0",
+    "FLD_JPM_PAY_GRADE": "No Grade",
+    "isJobSaved": false,
+    "FLD_JPM_HIRING_RANGE_MIN": "$50,000",
+    "JPM_RECRUITSTARTDATE": "Nov 25, 2026",
+    "JPM_CONTACTEMAIL": "talentacquisition@mit.edu",
+    "JPS_JPID": "35257",
+    "JPM_ISREFERRALPOSITION": null,
+    "JPM_COSTCENTER": "065000",
+    "JPM_CREATEDON": "Nov 25, 2026",
+    "JPM_EDUCATION": "Not Indicated",
+    "FLD_JPM_HIRING_RANGE_MAX": "$63,000",
+    "PROCESSINGTIME": "Nov 25, 2026",
+    "JPM_SALARYTYPE": "United States of America, US Dollar",
+    "JPM_IMAGE": "",
+    "JPM_SALARYHIGH": "0.0",
+    "LOCALECODE": "English",
+    "JPM_LOCATION": "Cambridge, MA",
+    "LOCALECODELIST": {
+     "en-us": "English"
+    },
+    "JPM_CONTACTNAME": "HR Talent Acquisition",
+    "JPM_DURATION": "Full-Time",
+    "JPM_ISTRAVELREQUIRED": null,
+    "JP_POSTEDON": "Nov 25, 2026",
+    "JPM_ESSENTIALFUNCTIONS": "<p><em>REQUIRED</em>: Bachelor&rsquo;s degree in electrical, computer, or mechanical engineering or a related field; a minimum of two years of hands-on electronics or specialized lab experience, which may include experience gained as an undergraduate; experience with surface-mount soldering and electronics assembly; ability to read schematics and use basic bench instruments; commitment to producing accurate and high-quality procedures and data; robust time management skills and ability to prioritize own work to meet deadlines; ability to maintain a safe work environment; ability to work independently with minimal supervision; and willingness to learn new tools and techniques quickly. <em>PREFERRED</em>: Experience with PCB design (Altium preferred), embedded programming (C preferred), fine-pitch rework or flexible circuits, and IPC J-STD-001 or IPC-A-610 training.</p><p>This is a one-year position with the possibility of renewal, depending on funding and performance.<br /><br />11/25/2026</p>",
+    "FLD_JP_DEPARTMENT": "Mechanical Engineering",
+    "JPM_DESCRIPTION": "<p><strong>TECHNICAL ASSOCIATE I</strong>, <em>Mechanical Engineering</em>, to join an interdisciplinary team developing ingestible electronic systems for drug delivery and gastrointestinal monitoring. The Technical Associate I is the laboratory's hands-on electronics technician. Responsibilities include assembling, reworking, programming, and testing printed circuit boards and devices; building test fixtures; preparing devices for bench and animal studies; maintaining fabrication and test equipment; ordering components; and keeping accurate procedures, build records, and test results. The role works closely with engineers, scientists, and students and offers hands-on experience in a fast-paced translational research setting.</p>",
+    "REQ_CLIENTID": "26267",
+    "JPM_MODIFIEDON": "Nov 25, 2026"
+   }
+  },
+  {
+   "questionnaires": [],
+   "identity": {
+    "locale": "en_US",
+    "identityToken": "35127_en-us",
+    "id": 35127
+   },
+   "cri": {
+    "clientCode": "CLIENT_MIT",
+    "siteCode": "EXTERNAL",
+    "clientId": 700,
+    "sessionInfoKey": "CLIENT_MITEXTERNAL",
+    "validLocales": [
+     "en-us"
+    ],
+    "internalSite": false,
+    "clientUrlAlias": "client_mit",
+    "siteUrlAlias": "external",
+    "applicantSiteId": 2,
+    "locale": "en_US"
+   },
+   "jobPostId": 35127,
+   "jobPostLocaleAsString": "en-us",
+   "active": true,
+   "availableLocales": [
+    "en_US"
+   ],
+   "questionnaireRouteId": -1,
+   "reqCategories": [],
+   "reqSkills": [],
+   "jobPostLocale": "en_US",
+   "videos": null,
+   "dateFormatPattern": "yyyy-MM-dd'T'HH:mm:ss'Z'",
+   "attributes": {
+    "JPM_WORKENVIRONMENT": "",
+    "FLD_JP_POSTING_TITLE": "Program/Project Coordinator",
+    "JPM_HOURSOFWORK": "40",
+    "JPM_CONTACTPHONE": "",
+    "JPM_POSTALCODE": "02139",
+    "JPM_TITLE": "Facilities Coordinator",
+    "FLD_JPM_DIVISION": "Sloan School of Management",
+    "JPM_REQID": "26210",
+    "FLD_JP_POSITION_CATEGORY": "Facilities",
+    "JPM_EXPERIENCE": "Not Indicated",
+    "RANK": "1.0",
+    "JPM_HOURSOFWORKUNIT": "Week",
+    "JPM_SALARYLOW": "0.0",
+    "FLD_JPM_PAY_GRADE": "6",
+    "isJobSaved": false,
+    "FLD_JPM_HIRING_RANGE_MIN": "$63,200",
+    "JPM_RECRUITSTARTDATE": "Oct 30, 2026",
+    "JPM_CONTACTEMAIL": "talentacquisition@mit.edu",
+    "JPS_JPID": "35127",
+    "JPM_ISREFERRALPOSITION": null,
+    "JPM_COSTCENTER": "121015",
+    "JPM_CREATEDON": "Nov 2, 2026",
+    "JPM_EDUCATION": "Not Indicated",
+    "FLD_JPM_HIRING_RANGE_MAX": "$80,050",
+    "PROCESSINGTIME": "Nov 25, 2026",
+    "JPM_SALARYTYPE": "United States of America, US Dollar",
+    "JPM_IMAGE": "",
+    "JPM_SALARYHIGH": "0.0",
+    "LOCALECODE": "English",
+    "JPM_LOCATION": "Cambridge, MA",
+    "LOCALECODELIST": {
+     "en-us": "English"
+    },
+    "JPM_CONTACTNAME": "HR Talent Acquisition",
+    "JPM_DURATION": "Full-time (Hybrid)",
+    "JPM_ISTRAVELREQUIRED": null,
+    "JP_POSTEDON": "Nov 25, 2026",
+    "JPM_ESSENTIALFUNCTIONS": "<p><em>REQUIRED</em>: Bachelor&rsquo;s degree (or equivalent experience); minimum two years administrative and/or project/program management experience; understanding of facilities, including building systems and ability to read architectural and engineering drawings; strong technical skills for data tracking and management systems; solid understanding of accounting practices and procedures including purchasing, accounts payable and accounts receivable; strong computing skills and ability to learn new software quickly; work well under pressure of deadlines, with excellent attention to detail and follow-through, ability to balance multiple tasks simultaneously and have a strong sense of organizational process; strong interpersonal communication and project management skills are a must; ability to work outside traditional working hours on occasions, particularly in relation to coordination of departmental events and moves;; demonstrated ability to work with diverse stakeholders and contribute to an environment that fosters teamwork and accountability.</p><p>11/2/2026</p>",
+    "FLD_JP_DEPARTMENT": "MIT Sloan Facilities & Space Planning",
+    "JPM_DESCRIPTION": "<p><strong>FACILITIES COORDINATOR</strong>, <em>MIT Sloan Facilities &amp; Space Planning</em>, manage databases and information systems to track space allocation and usage and to analyze building maintenance issues and trends in MIT Sloan School facilities; monitor MIT Sloan's public spaces on a daily basis to identify problems, prioritize them, and initiate repair requests, understanding the wider building context and the goal of maintaining a high level of quality in the physical environment; assist with FSP's financial accounting and regular budget processes; plan and carry out office moves at MIT Sloan; manage MIT Sloan&rsquo;s office security with regard to keys, alarm and door codes, and security access. May contribute insight and apply expertise to FSP management on strategic issues.</p><p>The full job description is available at <a href=\"https://web.mit.edu/sloan-hr/jobs/FSPCoordinator.pdf\"> https://web.mit.edu/sloan-hr/jobs/FSPCoordinator.pdf</a></p>",
+    "REQ_CLIENTID": "26210",
+    "JPM_MODIFIEDON": "Nov 25, 2026"
+   }
+  }
+ ],
+ "pageNum": 1
+}

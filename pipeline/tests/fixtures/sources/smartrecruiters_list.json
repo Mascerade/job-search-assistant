@@ -1,0 +1,229 @@
+{
+ "offset": 0,
+ "limit": 2,
+ "totalFound": 2,
+ "content": [
+  {
+   "id": "3743990017102426",
+   "name": "Scientific Writer and Grant Development Specialist",
+   "uuid": "2129b755-16fa-4e9a-b8f4-36b64e4de5bd",
+   "jobAdId": "d27cb333-5244-4f94-ad33-6a1e0e32b634",
+   "defaultJobAd": true,
+   "refNumber": "004391SR",
+   "company": {
+    "identifier": "HarvardUniversity",
+    "name": "Harvard University"
+   },
+   "releasedDate": "2026-11-26T08:53:54.722Z",
+   "location": {
+    "city": "Boston",
+    "region": "MA",
+    "country": "us",
+    "postalCode": "02115",
+    "remote": false,
+    "hybrid": false,
+    "fullLocation": "Boston, MA, United States"
+   },
+   "industry": {
+    "id": "higher_education",
+    "label": "Higher Education"
+   },
+   "department": {
+    "id": "3000000000363324",
+    "label": "Neurobiology"
+   },
+   "function": {
+    "id": "administrative",
+    "label": "Administrative"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "not_applicable",
+    "label": "Not Applicable"
+   },
+   "customField": [
+    {
+     "fieldId": "6824d7605d1fc55c87956e55",
+     "fieldLabel": "Union",
+     "valueId": "55",
+     "valueLabel": "55 - Hvd Union Cler & Tech Workers"
+    },
+    {
+     "fieldId": "6824d729c6149f533bc0add5",
+     "fieldLabel": "Salary Grade",
+     "valueId": "056",
+     "valueLabel": "056"
+    },
+    {
+     "fieldId": "COUNTRY",
+     "fieldLabel": "Country/Region",
+     "valueId": "us",
+     "valueLabel": "United States"
+    },
+    {
+     "fieldId": "6824d49f1066335f733d4fa2",
+     "fieldLabel": "Work Format",
+     "valueId": "On-site",
+     "valueLabel": "Fully On-Site"
+    },
+    {
+     "fieldId": "6808942ae7dd6717796fd4c6",
+     "fieldLabel": "Department",
+     "valueId": "3000000000363324",
+     "valueLabel": "Neurobiology"
+    },
+    {
+     "fieldId": "6808942ae7dd6717796fd4c5",
+     "fieldLabel": "Brands",
+     "valueId": "0eff6b63-6846-4695-8072-04d5972e6550",
+     "valueLabel": "Harvard Medical School"
+    },
+    {
+     "fieldId": "6824d7491066335f733d4fa6",
+     "fieldLabel": "FLSA Status",
+     "valueId": "N",
+     "valueLabel": "Non-exempt"
+    },
+    {
+     "fieldId": "6824d7adc6149f533bc0add6",
+     "fieldLabel": "Harvard Job Function",
+     "valueId": "GEN",
+     "valueLabel": "General Administration"
+    },
+    {
+     "fieldId": "6824d8131066335f733d4fa7",
+     "fieldLabel": "Term Appointment",
+     "valueId": "Y",
+     "valueLabel": "Yes"
+    },
+    {
+     "fieldId": "69b844291078543aac9c3486",
+     "fieldLabel": "Search Firm/Agency",
+     "valueId": "NA",
+     "valueLabel": "Not Applicable"
+    }
+   ],
+   "visibility": "PUBLIC",
+   "ref": "https://api.smartrecruiters.com/v1/companies/HarvardUniversity/postings/3743990017102426",
+   "language": {
+    "code": "en",
+    "label": "English",
+    "labelNative": "English (US)"
+   }
+  },
+  {
+   "id": "3743990017099136",
+   "name": "Area Manager, Science Facilities",
+   "uuid": "6041503f-f9c0-4f3d-876f-5f333b0ddcd9",
+   "jobAdId": "7bd964c9-eb5e-4761-aaba-9b45528ff2ae",
+   "defaultJobAd": true,
+   "refNumber": "004482SR",
+   "company": {
+    "identifier": "HarvardUniversity",
+    "name": "Harvard University"
+   },
+   "releasedDate": "2026-11-25T22:04:41.645Z",
+   "location": {
+    "city": "Cambridge",
+    "region": "MA",
+    "country": "us",
+    "postalCode": "02138",
+    "remote": false,
+    "hybrid": false,
+    "fullLocation": "Cambridge, MA, United States"
+   },
+   "industry": {
+    "id": "higher_education",
+    "label": "Higher Education"
+   },
+   "department": {
+    "id": "3000000000369682",
+    "label": "Administration and Finance - Office of Physical Resources and Planning"
+   },
+   "function": {
+    "id": "management",
+    "label": "Management"
+   },
+   "typeOfEmployment": {
+    "id": "permanent",
+    "label": "Full-time"
+   },
+   "experienceLevel": {
+    "id": "not_applicable",
+    "label": "Not Applicable"
+   },
+   "customField": [
+    {
+     "fieldId": "6824d7605d1fc55c87956e55",
+     "fieldLabel": "Union",
+     "valueId": "00",
+     "valueLabel": "00 - Non Union, Exempt or Temporary"
+    },
+    {
+     "fieldId": "6824d729c6149f533bc0add5",
+     "fieldLabel": "Salary Grade",
+     "valueId": "059",
+     "valueLabel": "059"
+    },
+    {
+     "fieldId": "COUNTRY",
+     "fieldLabel": "Country/Region",
+     "valueId": "us",
+     "valueLabel": "United States"
+    },
+    {
+     "fieldId": "6824d49f1066335f733d4fa2",
+     "fieldLabel": "Work Format",
+     "valueId": "On-site",
+     "valueLabel": "Fully On-Site"
+    },
+    {
+     "fieldId": "6808942ae7dd6717796fd4c6",
+     "fieldLabel": "Department",
+     "valueId": "3000000000369682",
+     "valueLabel": "Administration and Finance - Office of Physical Resources and Planning"
+    },
+    {
+     "fieldId": "6808942ae7dd6717796fd4c5",
+     "fieldLabel": "Brands",
+     "valueId": "0bce703b-6f82-4c9e-9918-42a3e55517e8",
+     "valueLabel": "Harvard Faculty of Arts and Sciences"
+    },
+    {
+     "fieldId": "6824d7491066335f733d4fa6",
+     "fieldLabel": "FLSA Status",
+     "valueId": "X",
+     "valueLabel": "Exempt"
+    },
+    {
+     "fieldId": "6824d7adc6149f533bc0add6",
+     "fieldLabel": "Harvard Job Function",
+     "valueId": "FAC",
+     "valueLabel": "Facilities"
+    },
+    {
+     "fieldId": "6824d8131066335f733d4fa7",
+     "fieldLabel": "Term Appointment",
+     "valueId": "N",
+     "valueLabel": "No"
+    },
+    {
+     "fieldId": "69b844291078543aac9c3486",
+     "fieldLabel": "Search Firm/Agency",
+     "valueId": "NA",
+     "valueLabel": "Not Applicable"
+    }
+   ],
+   "visibility": "PUBLIC",
+   "ref": "https://api.smartrecruiters.com/v1/companies/HarvardUniversity/postings/3743990017099136",
+   "language": {
+    "code": "en",
+    "label": "English",
+    "labelNative": "English (US)"
+   }
+  }
+ ]
+}

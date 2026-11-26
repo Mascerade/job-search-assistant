@@ -3,8 +3,8 @@
 A private, single-user tool that finds Boston-area jobs every day, writes a tailored resume and
 cover letter for each match, and tracks every application from "found" to "offer".
 
-> Status: **Milestone 1 of 5** — the tracker website, database, login, and master profile work.
-> The daily search, AI scoring, and document tailoring arrive in milestones 2–4.
+> Status: **Milestone 2 of 5** — the tracker website, login, master profile, and the daily job feed
+> (72 employer boards) work. AI scoring and document tailoring arrive in milestones 3–4.
 
 ## How it fits together
 
@@ -60,10 +60,26 @@ cd web && npm install && npm run dev        # http://localhost:5173
 Locally, sign-in emails don't really send: open the Mailpit inbox at http://127.0.0.1:54324 to
 click your magic link.
 
+## The daily job feed
+
+`config/sources.yaml` lists the employer boards (universities, hospitals, tech companies) and which
+careers platform each uses. Every morning `.github/workflows/daily.yml` runs:
+
+```bash
+cd pipeline
+uv run jobsearch daily --dry-run   # fetch + filter, print what it would keep, save nothing
+uv run jobsearch daily             # fetch, filter, save to Supabase, close postings that disappeared
+```
+
+Filtering is cheap and deterministic (no AI): title must match a track's keywords and not be senior
+or part-time; location must be one of your towns, US-remote, or hybrid; obvious mismatches in the
+description (5+ years required, security clearance) are dropped with a reason you can see under
+"Show filtered out" on Today. Borderline cases are kept for the AI score in milestone 3.
+
 ## Tests
 
 ```bash
-cd pipeline && uv run pytest && uv run ruff check .   # profile rules
+cd pipeline && uv run pytest && uv run ruff check . && uv run mypy   # filters, adapters, profile; strict types
 cd web && npm run lint && npm run build               # types, lint, build
 npx supabase test db                                  # row-level security + triggers (pgTAP)
 ```
@@ -73,7 +89,7 @@ CI runs all three on every push (`.github/workflows/ci.yml`).
 ## Milestones
 
 1. ✅ Tracker + profile: schema, login, board, job detail, manual add, profile, settings
-2. Daily job feed: Greenhouse / Lever / Ashby / Workday adapters, filters, `daily.yml` cron
+2. ✅ Daily job feed: 9 careers platforms, 72 boards, filters, `daily.yml` cron
 3. AI scoring with Claude Haiku 5.5, spend cap, labeled eval set
 4. Tailoring with Claude Opus 5.5, fact verification, DOCX/PDF rendering, approvals
 5. Morning digest email, job-board APIs, HigherEdJobs, cleanup

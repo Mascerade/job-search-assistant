@@ -1,0 +1,32 @@
+name: Daily job feed
+
+on:
+  schedule:
+    # 10:15 UTC = 5:15 a.m. Boston in winter, 6:15 a.m. in summer.
+    # GitHub sometimes starts scheduled runs late; that's fine here.
+    - cron: "15 10 * * *"
+  workflow_dispatch: # "Run workflow" button for a manual run
+
+concurrency:
+  group: daily-feed
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  feed:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: pipeline
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - name: Fetch, filter, and save jobs
+        run: uv run jobsearch daily
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}

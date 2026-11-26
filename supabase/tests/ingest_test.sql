@@ -1,0 +1,66 @@
+-- Tests for the job-feed functions. Run with: npx supabase test db
+begin;
+select plan(13);
+
+-- First ingest: one new posting
+select is(
+  public.ingest_postings('[{"source":"greenhouse","source_job_id":"acme:1","source_board":"greenhouse:acme",
+    "company":"Acme","title":"Software Engineer","location":"Boston, MA","dedupe_key":"acme|software engineer|boston",
+    "track":"software","pipeline_state":"new","tags":["remote-ok"]}]'::jsonb),
+  '{"inserted": 1, "updated": 0, "duplicates": 0}'::jsonb,
+  'new posting is inserted'
+);
+
+-- Kojo moves it along; the pipeline scores it
+update public.jobs set status = 'applied', notes = 'Referred by Sam', pipeline_state = 'scored'
+  where source_job_id = 'acme:1';
+
+-- Second ingest of the same posting, now with a changed title and a filter verdict
+select is(
+  public.ingest_postings('[{"source":"greenhouse","source_job_id":"acme:1","source_board":"greenhouse:acme",
+    "company":"Acme","title":"Software Engineer I","location":"Boston, MA","dedupe_key":"acme|software engineer i|boston",
+    "track":"software","pipeline_state":"filtered_out","filter_reason":"test"}]'::jsonb),
+  '{"inserted": 0, "updated": 1, "duplicates": 0}'::jsonb,
+  'existing posting is updated, not duplicated'
+);
+select is((select title from public.jobs where source_job_id = 'acme:1'), 'Software Engineer I', 'posting fields refresh');
+select is((select status::text from public.jobs where source_job_id = 'acme:1'), 'applied', 'application status is untouched');
+select is((select notes from public.jobs where source_job_id = 'acme:1'), 'Referred by Sam', 'notes are untouched');
+select is((select pipeline_state::text from public.jobs where source_job_id = 'acme:1'), 'scored', 'pipeline progress past filtering is kept');
+select is((select tags from public.jobs where source_job_id = 'acme:1'), array['remote-ok'], 'tags are kept');
+
+-- Same job from another board (same dedupe key) is skipped
+select is(
+  public.ingest_postings('[{"source":"lever","source_job_id":"acme2:9","source_board":"lever:acme2",
+    "company":"Acme","title":"Software Engineer I","location":"Boston, MA","dedupe_key":"acme|software engineer i|boston",
+    "pipeline_state":"new"}]'::jsonb),
+  '{"inserted": 0, "updated": 0, "duplicates": 1}'::jsonb,
+  'cross-source duplicate is skipped'
+);
+
+-- Same board, same title and city, different id: a separate opening, not a duplicate
+select is(
+  public.ingest_postings('[{"source":"greenhouse","source_job_id":"acme:3","source_board":"greenhouse:acme",
+    "company":"Acme","title":"Software Engineer I","location":"Boston, MA","dedupe_key":"acme|software engineer i|boston",
+    "pipeline_state":"new"}]'::jsonb),
+  '{"inserted": 1, "updated": 0, "duplicates": 0}'::jsonb,
+  'two openings with the same title on one board are both kept'
+);
+
+-- Closing: a second posting on the board, then a fetch that only sees acme:2
+select public.ingest_postings('[{"source":"greenhouse","source_job_id":"acme:2","source_board":"greenhouse:acme",
+  "company":"Acme","title":"Data Analyst","dedupe_key":"acme|data analyst|boston","pipeline_state":"new"}]'::jsonb);
+select is(public.close_missing_postings('greenhouse:acme', array['acme:2']), 2, 'postings missing from the board are closed');
+select isnt((select closed_at from public.jobs where source_job_id = 'acme:1'), null, 'missing posting gets closed_at');
+
+-- Seeing it again reopens it
+select public.ingest_postings('[{"source":"greenhouse","source_job_id":"acme:1","source_board":"greenhouse:acme",
+  "company":"Acme","title":"Software Engineer I","dedupe_key":"acme|software engineer i|boston","pipeline_state":"new"}]'::jsonb);
+select is((select closed_at from public.jobs where source_job_id = 'acme:1'), null, 'reappearing posting is reopened');
+
+-- The website's roles can't call the pipeline functions
+set local role authenticated;
+select throws_ok($$ select public.ingest_postings('[]'::jsonb) $$, '42501', null, 'signed-in users cannot ingest');
+
+select * from finish();
+rollback;

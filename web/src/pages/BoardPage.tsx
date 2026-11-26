@@ -30,6 +30,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { isAutoRejected } from '@/lib/jobs'
 import { useJobs, useSetStatus } from '@/lib/queries'
 import { CLOSED_STATUSES, STATUS } from '@/lib/status'
 import type { ApplicationStatus, Job } from '@/lib/types'
@@ -57,6 +58,7 @@ function JobCardBody({ job, showStatus }: { job: Job; showStatus?: boolean }) {
       </Link>
       <p className="text-sm text-muted-foreground">{job.company}</p>
       {showStatus && <StatusBadge status={job.status} className="mt-2" />}
+      {job.closed_at && <p className="mt-1 text-xs font-medium text-warning-text">Posting closed</p>}
     </>
   )
 }
@@ -209,7 +211,7 @@ export function BoardPage() {
 
   const byColumn = useMemo(() => {
     const map = Object.fromEntries(ALL_COLUMNS.map((c) => [c.id, [] as Job[]])) as Record<ColumnId, Job[]>
-    for (const job of jobs ?? []) map[columnOf(job.status)].push(job)
+    for (const job of jobs ?? []) if (!isAutoRejected(job)) map[columnOf(job.status)].push(job)
     for (const list of Object.values(map)) list.sort((a, b) => (b.fit_score ?? -1) - (a.fit_score ?? -1))
     return map
   }, [jobs])
