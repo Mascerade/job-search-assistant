@@ -1,0 +1,33 @@
+# Personal data — never commit
+resumes/
+private/
+*.docx.local
+profile*.yaml
+!pipeline/tests/fixtures/profile*.yaml
+
+# Secrets
+anthropic-key*
+*.key
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+output/
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

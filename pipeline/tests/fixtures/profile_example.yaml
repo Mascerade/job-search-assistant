@@ -1,0 +1,26 @@
+# Fictional profile used by tests. Not a real person.
+contact:
+  name: Alex Example
+  email: alex@example.com
+education:
+  - id: edu-state
+    school: State University
+    degree: B.S. Computer Science
+    end: Expected Spring 2027
+experience:
+  - id: acme
+    title: Software Intern
+    org: Acme Corp
+    facts:
+      - id: acme-api
+        text: Built a REST API in Python serving 3 internal teams.
+        tags: [software]
+projects:
+  - id: weather
+    name: Weather Bot
+    facts:
+      - id: weather-bot
+        text: Wrote a Discord bot that posts daily forecasts.
+skills:
+  - category: Languages
+    items: [Python, TypeScript]

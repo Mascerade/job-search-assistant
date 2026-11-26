@@ -1,0 +1,179 @@
+/*
+ * Theme for the Job Search Assistant.
+ * Source of truth: design-system/job-search-assistant/MASTER.md (UI/UX Pro Max),
+ * including its "Project Adaptations" section. Every text/background pair below was
+ * checked for >= 4.5:1 contrast (input borders >= 3:1).
+ */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource/fira-sans/400.css";
+@import "@fontsource/fira-sans/500.css";
+@import "@fontsource/fira-sans/600.css";
+@import "@fontsource/fira-sans/700.css";
+@import "@fontsource/fira-code/400.css";
+@import "@fontsource/fira-code/500.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: 'Fira Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-heading: 'Fira Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Fira Code', ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-text: var(--success-text);
+  --color-warning-text: var(--warning-text);
+  --color-brand-secondary: var(--brand-secondary);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Application status colors (always paired with an icon + label in the UI) */
+  --color-status-new: var(--status-new);
+  --color-status-new-bg: var(--status-new-bg);
+  --color-status-docs-ready: var(--status-docs-ready);
+  --color-status-docs-ready-bg: var(--status-docs-ready-bg);
+  --color-status-applied: var(--status-applied);
+  --color-status-applied-bg: var(--status-applied-bg);
+  --color-status-interviewing: var(--status-interviewing);
+  --color-status-interviewing-bg: var(--status-interviewing-bg);
+  --color-status-offer: var(--status-offer);
+  --color-status-offer-bg: var(--status-offer-bg);
+  --color-status-rejected: var(--status-rejected);
+  --color-status-rejected-bg: var(--status-rejected-bg);
+  --color-status-closed: var(--status-closed);
+  --color-status-closed-bg: var(--status-closed-bg);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+}
+
+:root {
+  --radius: 0.5rem;
+
+  --background: #F0F9FF;
+  --foreground: #0C4A6E;
+  --card: #FFFFFF;
+  --card-foreground: #0C4A6E;
+  --popover: #FFFFFF;
+  --popover-foreground: #0C4A6E;
+  --primary: #0369A1;
+  --primary-foreground: #FFFFFF;
+  /* shadcn "secondary" = soft button fill; the design system's bright secondary
+     (#0EA5E9) is exposed as --brand-secondary for fills/decoration only (never text). */
+  --secondary: #E0F2FE;
+  --secondary-foreground: #0C4A6E;
+  --brand-secondary: #0EA5E9;
+  --muted: #E7EFF5;
+  --muted-foreground: #475569;
+  --accent: #E0F2FE;
+  --accent-foreground: #0C4A6E;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --success: #16A34A;
+  --success-foreground: #000000;
+  --success-text: #15803D;
+  --warning-text: #B45309;
+  --border: #BAE6FD;
+  --input: #5B87A6;
+  --ring: #0369A1;
+
+  --status-new: #0369A1;            --status-new-bg: #E0F2FE;
+  --status-docs-ready: #6D28D9;     --status-docs-ready-bg: #EDE9FE;
+  --status-applied: #4338CA;        --status-applied-bg: #E0E7FF;
+  --status-interviewing: #B45309;   --status-interviewing-bg: #FEF3C7;
+  --status-offer: #15803D;          --status-offer-bg: #DCFCE7;
+  --status-rejected: #B91C1C;       --status-rejected-bg: #FEE2E2;
+  --status-closed: #475569;         --status-closed-bg: #F1F5F9;
+}
+
+.dark {
+  --background: #0B1220;
+  --foreground: #E0F2FE;
+  --card: #111A2E;
+  --card-foreground: #E0F2FE;
+  --popover: #111A2E;
+  --popover-foreground: #E0F2FE;
+  --primary: #38BDF8;
+  --primary-foreground: #0B1220;
+  --secondary: #1E293B;
+  --secondary-foreground: #E0F2FE;
+  --brand-secondary: #7DD3FC;
+  --muted: #1E293B;
+  --muted-foreground: #94A3B8;
+  --accent: #1E3A5F;
+  --accent-foreground: #E0F2FE;
+  --destructive: #F87171;
+  --destructive-foreground: #0B1220;
+  --success: #22C55E;
+  --success-foreground: #052E16;
+  --success-text: #4ADE80;
+  --warning-text: #FBBF24;
+  --border: #1E3A5F;
+  --input: #6B8DB5;
+  --ring: #38BDF8;
+
+  --status-new: #7DD3FC;            --status-new-bg: #0C2A40;
+  --status-docs-ready: #C4B5FD;     --status-docs-ready-bg: #2A1F4D;
+  --status-applied: #A5B4FC;        --status-applied-bg: #1F2552;
+  --status-interviewing: #FCD34D;   --status-interviewing-bg: #3A2A0A;
+  --status-offer: #86EFAC;          --status-offer-bg: #0F2E1C;
+  --status-rejected: #FCA5A5;       --status-rejected-bg: #3B1414;
+  --status-closed: #CBD5E1;         --status-closed-bg: #1E293B;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+    font-size: 16px;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    line-height: 1.5;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  /* Visible keyboard focus everywhere (never removed). */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Respect reduced-motion: kill non-essential transitions and animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
