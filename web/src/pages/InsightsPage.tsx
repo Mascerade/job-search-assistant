@@ -555,7 +555,11 @@ export function InsightsPage() {
           </h2>
           <div className="grid gap-4 md:grid-cols-2">
             <ChartCard title="Role type" subtitle="Matches by track" table={{ columns: ['Role type', 'Matches'], rows: tracks.map((p) => [TRACK_LABEL[p.key as JobTrack] ?? p.key, p.count]) }}>
-              <RankedBars parts={tracks.map((p) => ({ ...p, label: TRACK_LABEL[p.key as JobTrack] ?? p.key }))} colorOf={trackColor} />
+              <RankedBars
+                parts={tracks.map((p) => ({ ...p, label: TRACK_LABEL[p.key as JobTrack] ?? p.key }))}
+                colorOf={trackColor}
+                labelWidth="w-40"
+              />
             </ChartCard>
             <ChartCard title="Where they were found" subtitle="Matches by source" table={{ columns: ['Source', 'Matches'], rows: sources.map((p) => [p.label, p.count]) }}>
               <RankedBars parts={sources} colorOf={() => 'bg-chart-1'} />
