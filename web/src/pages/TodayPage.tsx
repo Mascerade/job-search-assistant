@@ -186,6 +186,7 @@ const VIEWS: { key: View; label: string }[] = [
   { key: 'software', label: TRACK_LABEL.software },
   { key: 'hybrid', label: TRACK_LABEL.hybrid },
   { key: 'program_admin', label: TRACK_LABEL.program_admin },
+  { key: 'research', label: TRACK_LABEL.research },
 ]
 
 /** Notion-style view tabs that filter the list by role type. */

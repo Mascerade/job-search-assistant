@@ -19,9 +19,10 @@ Ats = Literal[
     "silkroad",
     "pageup",
     "peopleclick",
+    "avature",
     "adzuna",
 ]
-Track = Literal["software", "program_admin", "hybrid"]
+Track = Literal["software", "program_admin", "hybrid", "research"]
 RemoteType = Literal["onsite", "hybrid", "remote"]
 EmploymentType = Literal["full_time", "part_time", "contract", "temporary", "intern"]
 PipelineState = Literal["new", "filtered_out"]
@@ -34,10 +35,10 @@ class Board(BaseModel):
     company: str
     # greenhouse board token / lever company / ashby org / workday tenant / smartrecruiters
     # company id / jibe host / silkroad or pageup short name / peopleclick client code /
-    # adzuna place to search around
+    # avature host / adzuna place to search around
     token: str
     wd: int | None = None  # workday host number (wd1, wd5, ...)
-    site: str | None = None  # workday site name
+    site: str | None = None  # workday site name; avature path (default en_US/careers)
     feed_url: str | None = None  # RSS feeds (silkroad, pageup)
     search_terms: list[str] = Field(default_factory=list)  # workday, adzuna: search instead of listing all
     # Other names the employer goes by on job boards ("Massachusetts Institute of Technology"

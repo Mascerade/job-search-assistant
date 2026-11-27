@@ -125,7 +125,7 @@ def process_board(
                 if not lv.keep:
                     result.counts["filtered_location"] += 1
                     continue
-        dv = detail_verdict(p, settings)
+        dv = detail_verdict(p, settings, tv.track)
         result.counts["kept" if dv.keep else "filtered_detail"] += 1
         tags = lv.tags
         if is_staffing_agency(

@@ -1,8 +1,8 @@
 """Source adapters: one function per applicant-tracking system.
 
 Each `fetch_*` returns every open posting on a board as `Posting`s (Adzuna, an
-aggregator, returns recent search results instead). Workday and
-SmartRecruiters list endpoints have no descriptions, so those postings come back with
+aggregator, returns recent search results instead). Workday, SmartRecruiters, and
+Avature list pages have no descriptions, so those postings come back with
 `needs_detail=True` and `enrich()` fetches the detail page — only for the few that
 pass the title and location filters.
 """
@@ -18,6 +18,7 @@ from email.utils import parsedate_to_datetime
 from typing import Any
 
 import httpx
+from bs4 import BeautifulSoup
 
 from .config import ConfigError
 from .filters import dedupe_key, normalize_employment, salary_from_text
@@ -513,6 +514,102 @@ def _parse_peopleclick_date(raw: str | None) -> datetime | None:
 
 
 # ---------------------------------------------------------------------------
+# Avature career sites (Broad Institute): server-rendered HTML, no API.
+# The list pages (6 jobs each, whatever page size is asked for) have the title, posted
+# date, and work mode; the location, pay, and description are on each job's page, so
+# postings come back with needs_detail=True. Avature's RSS feed stops at 20 jobs.
+# ---------------------------------------------------------------------------
+
+AVATURE_MAX_PAGES = 100  # 600 jobs; Broad lists about 40
+_AVATURE_ID = re.compile(r"/JobDetail/[^/?#]+/(\d+)")
+_HTML = {"Accept": "text/html"}
+
+
+def _avature_base(board: Board) -> str:
+    return f"https://{board.token}/{board.site or 'en_US/careers'}"
+
+
+def _avature_posted(raw: str) -> datetime | None:
+    try:  # "Posted 25-Nov-2026"
+        return datetime.strptime(raw.replace("Posted", "").strip(), "%d-%b-%Y").replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def parse_avature_list(board: Board, page: str) -> list[Posting]:
+    out = []
+    for item in BeautifulSoup(page, "html.parser").select("article.article--result"):
+        link = item.select_one(".article__header__text__title a[href]")
+        m = _AVATURE_ID.search(str(link.get("href"))) if link else None
+        if not link or not m:
+            continue
+        posted = item.select_one(".list-item-posted")
+        workplace = item.select_one(".list-item-workplace")
+        out.append(
+            Posting(
+                source="avature",
+                board=board.key,
+                native_id=m.group(1),
+                company=board.company,
+                title=" ".join(link.get_text().split()),
+                url=str(link["href"]),
+                remote_type=_remote(workplace.get_text() if workplace else None),
+                posted_at=_avature_posted(posted.get_text()) if posted else None,
+                needs_detail=True,
+            )
+        )
+    return out
+
+
+def fetch_avature(board: Board, http: Http) -> list[Posting]:
+    found: dict[str, Posting] = {}
+    offset = 0
+    for _ in range(AVATURE_MAX_PAGES):
+        page = http.request(
+            "GET", f"{_avature_base(board)}/SearchJobs/", params={"jobOffset": offset}, headers=_HTML
+        ).text
+        listed = parse_avature_list(board, page)
+        new = [p for p in listed if p.native_id not in found]
+        if not new:  # past the end, Avature repeats the last page
+            break
+        found.update((p.native_id, p) for p in new)
+        offset += len(listed)
+    return list(found.values())
+
+
+def _avature_pay(raw: str) -> tuple[int | None, int | None]:
+    """ "$50,000.00/yr - $70,000.00/yr" (hourly ranges are ignored)."""
+    if "/hr" in raw.lower() or "hour" in raw.lower():
+        return None, None
+    return salary_from_text(re.sub(r"\s*/\s*(yr|year)", "", raw, flags=re.I))
+
+
+def parse_avature_detail(p: Posting, page: str) -> Posting:
+    fields: dict[str, str] = {}
+    body: list[str] = []
+    for f in BeautifulSoup(page, "html.parser").select(".article__content__view__field"):
+        label = f.select_one(".article__content__view__field__label")
+        value = f.select_one(".article__content__view__field__value")
+        if label:
+            fields[label.get_text(" ", strip=True).lower()] = value.get_text(" ", strip=True) if value else ""
+        elif text := html_to_text(str(f)):
+            body.append(text)
+    if loc := fields.get("location"):
+        p.locations = [x.strip() for x in loc.split(";") if x.strip()]
+    p.employment_type = normalize_employment(fields.get("time type")) or p.employment_type
+    p.salary_min, p.salary_max = _avature_pay(fields.get("pay range", ""))
+    p.description = "\n\n".join(body) or p.description
+    p.needs_detail = False
+    return _with_text_salary(p)
+
+
+def enrich_avature(p: Posting, board: Board, http: Http) -> Posting:
+    if not p.url:
+        return p
+    return parse_avature_detail(p, http.request("GET", p.url, headers=_HTML).text)
+
+
+# ---------------------------------------------------------------------------
 # Adzuna — https://developer.adzuna.com/docs/search (a job-board aggregator)
 #
 # One "board" is a set of title searches around one place (Board.token, e.g. "Boston").
@@ -635,12 +732,14 @@ FETCHERS: dict[str, Callable[[Board, Http], list[Posting]]] = {
     "silkroad": fetch_silkroad,
     "pageup": fetch_pageup,
     "peopleclick": fetch_peopleclick,
+    "avature": fetch_avature,
     "adzuna": fetch_adzuna,
 }
 
 ENRICHERS: dict[str, Callable[[Posting, Board, Http], Posting]] = {
     "workday": enrich_workday,
     "smartrecruiters": enrich_smartrecruiters,
+    "avature": enrich_avature,
 }
 
 

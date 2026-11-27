@@ -36,6 +36,9 @@ SETTINGS = Settings(
             ]
         ),
         "hybrid": TrackSettings(keywords=["academic technology", "research computing"]),
+        "research": TrackSettings(
+            keywords=["computational", "bioinformatics", "research assistant", "research associate"]
+        ),
     },
     locations=LocationSettings(towns=["Boston", "Cambridge", "Somerville", "Waltham", "Newton"]),
 )
@@ -74,6 +77,12 @@ def test_keyword_matching_is_order_free(keyword: str, title: str) -> None:
         ("Program Coordinator II", "program_admin"),
         ("Academic Technology Specialist", "hybrid"),
         ("Machine Learning Engineer", "software"),
+        ("Computational Associate I", "research"),
+        ("Early Career Researchers - Computational Associate I, Broad-wide openings", "research"),
+        ("Associate Computational Biologist", "research"),
+        ("Bioinformatics Analyst", "research"),
+        ("Research Assistant I", "research"),
+        ("Software Engineer, Computational Policy Lab", "software"),  # the longer keyword wins
     ],
 )
 def test_entry_level_titles_are_kept(title: str, track: Track) -> None:
@@ -95,6 +104,9 @@ def test_entry_level_titles_are_kept(title: str, track: Track) -> None:
         "Program Coordinator (Part-Time)",
         "Postdoctoral Fellow, Research Computing",
         "New Graduate Registered Nurse",  # matches "new grad" but is clinical
+        "Postdoctoral Associate, Computational Biology",
+        "Clinical Research Associate Manager",
+        "Staff Computational Scientist",
     ],
 )
 def test_senior_or_non_full_time_titles_are_filtered(title: str) -> None:
@@ -200,6 +212,50 @@ def test_obvious_experience_mismatch_is_filtered_but_borderline_kept() -> None:
         posting(description="4+ years of experience required."), SETTINGS
     ).keep  # AI decides
     assert detail_verdict(posting(description="3+ years of experience required."), SETTINGS).keep
+
+
+LAB_JOB = "Prepare samples, run PCR and flow cytometry, and maintain the mouse colony."
+CODING_JOB = "Analyze single-cell sequencing data in Python or R and maintain analysis pipelines."
+
+
+@pytest.mark.parametrize(
+    ("title", "description", "keep"),
+    [
+        ("Research Assistant I", CODING_JOB, True),
+        ("Research Assistant I", LAB_JOB, False),
+        ("Research Associate II", "Experience with R packages and Bioconductor.", True),
+        ("Research Associate II", "Support R&D lab operations.", False),  # "R&D" isn't R
+        ("Research Assistant, Data Analysis", LAB_JOB, True),  # the title already says data
+        ("Computational Associate I", LAB_JOB, True),
+        (
+            "Research Associate II",
+            "Run screens. Collaborate with experimentalists and computational biologists.",
+            False,
+        ),
+        (
+            "Research Associate II",
+            "Use Fiji, CellProfiler, Python, or R (programming experience is not required).",
+            False,
+        ),
+        (
+            "Research Assistant I",
+            "Strong computational skills and experience with statistical analysis.",
+            True,
+        ),
+    ],
+)
+def test_research_titles_need_programming_unless_the_title_says_so(
+    title: str, description: str, keep: bool
+) -> None:
+    v = detail_verdict(posting(title, description=description), SETTINGS, "research")
+    assert v.keep is keep
+    if not keep:
+        assert v.reason == "research role without programming"
+
+
+def test_programming_check_only_applies_to_research() -> None:
+    assert detail_verdict(posting("Research Assistant I", description=LAB_JOB), SETTINGS, "hybrid").keep
+    assert detail_verdict(posting("Research Assistant I", description=None), SETTINGS, "research").keep
 
 
 def test_clearance_and_part_time_are_filtered() -> None:

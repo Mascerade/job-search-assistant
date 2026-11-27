@@ -36,6 +36,13 @@ def routes(request: httpx.Request) -> httpx.Response:
             else "smartrecruiters_detail.json"
         )
         return httpx.Response(200, content=(FIX / name).read_bytes())
+    if "avature.net" in url:
+        if "/SearchJobs" in url:
+            offset = request.url.params.get("jobOffset", "0")
+            name = "avature_list_2.html" if offset == "3" else "avature_list_1.html"  # then repeats
+        else:
+            name = "avature_detail.html"
+        return httpx.Response(200, content=(FIX / name).read_bytes())
     if "careers.peopleclick.com" in url and "/getJobs" not in url:
         return httpx.Response(200, text="<html>search page</html>")  # cookie handshake
     for needle, name in table.items():
@@ -140,3 +147,21 @@ def test_peopleclick_salary_and_date(http: Http) -> None:
     if first.get("FLD_JPM_HIRING_RANGE_MIN", "").startswith("$"):
         assert ps[0].salary_min and ps[0].salary_max and ps[0].salary_min <= ps[0].salary_max
     assert ps[0].posted_at is not None
+
+
+def test_avature_pages_until_repeat_then_reads_detail(http: Http) -> None:
+    b = board("avature", "broadinstitute.avature.net")
+    ps = fetch(b, http)
+    assert_clean(ps)
+    assert len(ps) == 5  # 3 on the first page, 2 on the second, then the first page again
+    assert all(p.needs_detail and p.source == "avature" for p in ps)
+    first = ps[0]
+    assert first.url and "/en_US/careers/JobDetail/" in first.url
+    assert first.posted_at is not None
+    p = enrich(first, b, http)
+    assert not p.needs_detail
+    assert p.locations == ["Cambridge, MA"]
+    assert p.employment_type == "full_time"
+    assert (p.salary_min, p.salary_max) == (50_000, 70_000)
+    assert p.description and "Computational Associate" in p.description
+    assert "Pay Range" not in p.description  # labeled fields stay out of the description

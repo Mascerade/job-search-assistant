@@ -1,6 +1,6 @@
 -- Tests for the job-feed functions. Run with: npx supabase test db
 begin;
-select plan(13);
+select plan(18);
 
 -- First ingest: one new posting
 select is(
@@ -57,6 +57,32 @@ select isnt((select closed_at from public.jobs where source_job_id = 'acme:1'), 
 select public.ingest_postings('[{"source":"greenhouse","source_job_id":"acme:1","source_board":"greenhouse:acme",
   "company":"Acme","title":"Software Engineer I","dedupe_key":"acme|software engineer i|boston","pipeline_state":"new"}]'::jsonb);
 select is((select closed_at from public.jobs where source_job_id = 'acme:1'), null, 'reappearing posting is reopened');
+
+-- A job added by hand, later listed by a source at the same URL: linked, not duplicated
+insert into public.jobs (company, title, url, status, notes)
+  values ('Broad', 'Computational Associate I', 'https://example.avature.net/careers/JobDetail/CA-I/7/', 'applied', 'Applied 11/26');
+select is(
+  public.ingest_postings('[{"source":"avature","source_job_id":"example.avature.net:7","source_board":"avature:example.avature.net",
+    "url":"https://example.avature.net/careers/JobDetail/CA-I/7","company":"Broad Institute",
+    "title":"Early Career Researchers - Computational Associate I","dedupe_key":"broad institute|early career researchers|cambridge",
+    "track":"research","pipeline_state":"new"}]'::jsonb),
+  '{"inserted": 0, "updated": 1, "duplicates": 0}'::jsonb,
+  'a posting you added by hand is linked by URL, not added again'
+);
+select is(
+  (select array[source::text, title, status::text, notes, source_board] from public.jobs where url like '%/CA-I/7/'),
+  array['manual', 'Computational Associate I', 'applied', 'Applied 11/26', 'avature:example.avature.net'],
+  'your entry keeps its title, status, and notes and is tied to the board'
+);
+select is(
+  public.ingest_postings('[{"source":"avature","source_job_id":"example.avature.net:7","source_board":"avature:example.avature.net",
+    "url":"https://example.avature.net/careers/JobDetail/CA-I/7","company":"Broad Institute",
+    "title":"Early Career Researchers - Computational Associate I","pipeline_state":"new"}]'::jsonb),
+  '{"inserted": 0, "updated": 1, "duplicates": 0}'::jsonb,
+  'the next run finds the linked entry again'
+);
+select is(public.close_missing_postings('avature:example.avature.net', array[]::text[]), 1, 'a linked entry closes when the posting is taken down');
+select is((select count(*)::integer from public.jobs where url ilike '%/CA-I/7%'), 1, 'still one row for that posting');
 
 -- The website's roles can't call the pipeline functions
 set local role authenticated;

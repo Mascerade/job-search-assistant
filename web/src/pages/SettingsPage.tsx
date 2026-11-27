@@ -242,8 +242,9 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
               aria-describedby="focus_until-hint"
             />
             <p id="focus_until-hint" className="max-w-prose text-xs text-muted-foreground">
-              Until this date the daily resumes and cover letters go to software jobs first, then university tech,
-              then program admin (admin roles usually hire a few weeks before the start date). Jobs that start after
+              Until this date the daily resumes and cover letters go to software jobs first, then university tech
+              and computational research, then program admin (admin roles usually hire a few weeks before the start
+              date). Jobs that start after
               you're available and best fits still lead each group; staffing agencies always come last. Clear it to
               go by best fit only.
             </p>
@@ -255,7 +256,7 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
             <CardTitle className="text-base">Role tracks</CardTitle>
             <CardDescription>Job titles and phrases to search for, one per line.</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-6 lg:grid-cols-3">
+          <CardContent className="grid gap-6 md:grid-cols-2">
             {TRACK_ORDER.filter((t) => t in form.tracks).map((t) => (
               <div key={t} className="flex flex-col gap-3">
                 <Toggle
@@ -274,6 +275,12 @@ function SettingsForm({ settings }: { settings: AppSettings }) {
                   value={form.tracks[t].keywords}
                   onChange={(e) => patch({ tracks: { ...form.tracks, [t]: { ...form.tracks[t], keywords: e.target.value } } })}
                 />
+                {t === 'research' && (
+                  <p className="text-xs text-muted-foreground">
+                    Titles that don't say what kind of research, like "Research Assistant I", are kept only when the
+                    description asks for programming.
+                  </p>
+                )}
               </div>
             ))}
           </CardContent>

@@ -219,7 +219,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "application_status": "new"|"docs_ready"|"applied"|"interviewing"|"offer"|"rejected"|"withdrawn"|"not_interested","job_source": "manual"|"greenhouse"|"lever"|"ashby"|"workday"|"adzuna"|"jsearch"|"higheredjobs"|"other"|"smartrecruiters"|"jibe"|"silkroad"|"pageup"|"peopleclick","job_track": "software"|"program_admin"|"hybrid","pipeline_state": "new"|"filtered_out"|"scored"|"below_threshold"|"tailoring"|"needs_approval"|"ready"|"error"
+            "application_status": "new"|"docs_ready"|"applied"|"interviewing"|"offer"|"rejected"|"withdrawn"|"not_interested","job_source": "manual"|"greenhouse"|"lever"|"ashby"|"workday"|"adzuna"|"jsearch"|"higheredjobs"|"other"|"smartrecruiters"|"jibe"|"silkroad"|"pageup"|"peopleclick"|"avature","job_track": "software"|"program_admin"|"hybrid"|"research","pipeline_state": "new"|"filtered_out"|"scored"|"below_threshold"|"tailoring"|"needs_approval"|"ready"|"error"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -339,7 +339,7 @@ export const Constants = {
           }
         },"public": {
           Enums: {
-            "application_status": ["new", "docs_ready", "applied", "interviewing", "offer", "rejected", "withdrawn", "not_interested"],"job_source": ["manual", "greenhouse", "lever", "ashby", "workday", "adzuna", "jsearch", "higheredjobs", "other", "smartrecruiters", "jibe", "silkroad", "pageup", "peopleclick"],"job_track": ["software", "program_admin", "hybrid"],"pipeline_state": ["new", "filtered_out", "scored", "below_threshold", "tailoring", "needs_approval", "ready", "error"]
+            "application_status": ["new", "docs_ready", "applied", "interviewing", "offer", "rejected", "withdrawn", "not_interested"],"job_source": ["manual", "greenhouse", "lever", "ashby", "workday", "adzuna", "jsearch", "higheredjobs", "other", "smartrecruiters", "jibe", "silkroad", "pageup", "peopleclick", "avature"],"job_track": ["software", "program_admin", "hybrid", "research"],"pipeline_state": ["new", "filtered_out", "scored", "below_threshold", "tailoring", "needs_approval", "ready", "error"]
           }
         }
 } as const

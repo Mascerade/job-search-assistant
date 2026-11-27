@@ -164,7 +164,7 @@ function countBy<T>(items: T[], keyOf: (t: T) => string, labelOf: (k: string) =>
   return [...m.entries()].map(([key, count]) => ({ key, label: labelOf(key), count }))
 }
 
-export const TRACKS: JobTrack[] = ['software', 'hybrid', 'program_admin']
+export const TRACKS: JobTrack[] = ['software', 'hybrid', 'program_admin', 'research']
 
 export function byTrack(matches: InsightJob[]): Part[] {
   return countBy(matches.filter((j) => j.track), (j) => j.track as string).sort(byCount)
@@ -271,7 +271,7 @@ export function matchesOverTime(matches: InsightJob[], range: RangeKey, now = ne
     return {
       start,
       label: weekly ? `Week of ${dayLabel.format(start)}` : dayLabel.format(start),
-      counts: { software: 0, hybrid: 0, program_admin: 0 },
+      counts: { software: 0, hybrid: 0, program_admin: 0, research: 0 },
       total: 0,
     }
   })

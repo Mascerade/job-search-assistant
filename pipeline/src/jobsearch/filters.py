@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 
 from .models import EmploymentType, Posting, RemoteType, Settings, Track
 
-TRACK_ORDER: list[Track] = ["software", "program_admin", "hybrid"]
+TRACK_ORDER: list[Track] = ["software", "program_admin", "hybrid", "research"]
 
 
 @dataclass
@@ -110,7 +110,7 @@ def title_verdict(title: str, settings: Settings) -> Verdict:
     t = _words(title)
     if m := _ALWAYS_RE.search(t):
         return Verdict(keep=False, reason=f'title: "{m.group(0)}"', track=track)
-    if track in ("software", "hybrid") and (m := _TECH_RE.search(t)):
+    if track in ("software", "hybrid", "research") and (m := _TECH_RE.search(t)):
         return Verdict(keep=False, reason=f'title: "{m.group(0)}"', track=track)
     return Verdict(keep=True, track=track)
 
@@ -237,7 +237,48 @@ _CLEARANCE = re.compile(
 )
 
 
-def detail_verdict(posting: Posting, settings: Settings) -> Verdict:
+# Research titles that don't say what kind of research ("Research Assistant I", "Research
+# Associate II") are mostly lab-bench or clinical jobs. They're kept only when the description
+# asks for programming; titles like these already say the work is computational.
+_COMPUTATIONAL_TITLE = re.compile(
+    r"\b(comput|bioinformati|informatics|data|quantitative|statistic|machine learning|software|"
+    r"analytics|modeling|modelling|programm)",
+    re.I,
+)
+# What counts as "asks for programming": a language or the act of programming, or computational
+# work described as a skill. Bare "computational" doesn't count: lab postings mention
+# "computational biologists" as teammates.
+_PROGRAMMING = re.compile(
+    r"\b(python|matlab|julia|programming|coding|scripting|software development)\b"
+    r"|\b(computational|bioinformatics?) "
+    r"(skills|analys[ie]s|methods|experience|background|training|tools|pipelines)\b"
+    r"|\bRStudio\b|\bBioconductor\b|\bin R\b|\bR (?:programming|scripts?|packages?)\b"
+    r"|\b(?:Python|MATLAB|SAS|Stata|SQL)\s*(?:,|/|or|and)\s*R\b|\bR\s*(?:,|/|or|and)\s*(?:Python|MATLAB)\b",
+    re.I,
+)
+# "Python or R (programming experience is not required)": the sentence doesn't count.
+_NOT_NEEDED = re.compile(
+    r"\bnot (?:required|necessary|needed|expected)\b|\bno (?:prior )?(?:programming|coding)\b", re.I
+)
+
+
+def needs_programming_check(title: str) -> bool:
+    return not _COMPUTATIONAL_TITLE.search(title)
+
+
+def asks_for_programming(description: str) -> bool:
+    sentences = re.split(r"(?<=[.;!?])\s+|\n+", description)
+    return any(_PROGRAMMING.search(x) and not _NOT_NEEDED.search(x) for x in sentences)
+
+
+def detail_verdict(posting: Posting, settings: Settings, track: Track | None = None) -> Verdict:
+    if (
+        track == "research"
+        and posting.description
+        and needs_programming_check(posting.title)
+        and not asks_for_programming(posting.description)
+    ):
+        return Verdict(keep=False, reason="research role without programming")
     if settings.full_time_only and posting.employment_type in (
         "part_time",
         "contract",

@@ -68,10 +68,12 @@
   --color-status-rejected: var(--tag-red-fg);          --color-status-rejected-bg: var(--tag-red-bg);
   --color-status-closed: var(--tag-brown-fg);          --color-status-closed-bg: var(--tag-brown-bg);
 
-  /* Charts (dataviz reference palette). Series: 1 software, 2 university tech, 3 program admin. */
+  /* Charts (dataviz reference palette). Series: 1 software, 2 university tech, 3 program admin,
+     4 computational research. */
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
   --color-chart-grid: var(--chart-grid);
   --color-chart-baseline: var(--chart-baseline);
   --color-chart-muted: var(--chart-muted);
@@ -129,6 +131,7 @@
   --chart-1: #257DE0;
   --chart-2: #F47230;
   --chart-3: #00B894;
+  --chart-4: #F2A600;
   --chart-grid: #E7E7E7;
   --chart-baseline: #C2C2C2;
   --chart-muted: #D3D2CF;
@@ -180,6 +183,7 @@
   --chart-1: #338CED;
   --chart-2: #E76624;
   --chart-3: #00A888;
+  --chart-4: #D28E05;
   --chart-grid: #303030;
   --chart-baseline: #474747;
   --chart-muted: #3F3F3F;

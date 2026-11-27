@@ -67,7 +67,7 @@ SCORE_SCHEMA: dict[str, Any] = {
                     "job_id": {"type": "string"},
                     "score": {"type": "integer", "minimum": 0, "maximum": 100},
                     "reason": {"type": "string", "maxLength": 300},
-                    "track": {"type": "string", "enum": ["software", "program_admin", "hybrid"]},
+                    "track": {"type": "string", "enum": ["software", "program_admin", "hybrid", "research"]},
                     "years_required": {"type": ["integer", "null"], "minimum": 0, "maximum": 30},
                     "start": START_SCHEMA,
                     "concerns": {"type": "array", "items": {"type": "string"}, "maxItems": 3},
@@ -117,10 +117,15 @@ def system_prompt(profile: Profile, settings: Settings) -> str:
         WHAT THEY'RE LOOKING FOR
         - Full-time, entry-level roles: requirements of up to {years} years of experience are within
           range.
-        - Three tracks: software (entry-level software, ML/AI, data roles); program_admin (program
+        - Four tracks: software (entry-level software, ML/AI, data roles); program_admin (program
           coordinator/administrator/manager roles at universities, nonprofits, hospitals, research
           institutes); hybrid (university tech roles such as academic technology, research computing,
-          systems analyst).
+          systems analyst); research (computational research roles in labs at research institutes,
+          hospitals, universities, and biotech: computational associate, bioinformatics, research
+          assistant or associate jobs built on programming and data analysis). Computational
+          research is in their field, not a different one; judge it on the programming, data, and
+          research experience it asks for. Lab-bench or clinical research without programming is
+          the wrong field.
         - Boston area or US-remote. Graduating Spring 2027; available from {available}.
 
         FACTS TO APPLY
@@ -144,7 +149,7 @@ def system_prompt(profile: Profile, settings: Settings) -> str:
         - Don't lower the score for the start date; report it in start instead.
 
         FOR EACH JOB RETURN
-        - score, and track (the best fit of the three, even if the posting's label differs).
+        - score, and track (the best fit of the four, even if the posting's label differs).
         - reason: one specific sentence (at most 25 words) naming the main match and the main gap.
         - years_required: the minimum years of experience the posting requires, or null if unstated.
         - start: when the job starts (rules below).

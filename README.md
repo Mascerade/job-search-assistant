@@ -101,6 +101,17 @@ or part-time; location must be one of your towns, US-remote, or hybrid; obvious 
 description (5+ years required, security clearance) are dropped with a reason you can see under
 "Show filtered out" on Today. Borderline cases are kept for the AI score.
 
+**Tracks** are the four kinds of role the search looks for, each with its own title keywords on
+the Settings page: Software & ML, Program admin, University tech, and Computational research
+(computational associate, bioinformatics, and research assistant jobs built on programming, at
+places like the Broad Institute, Dana-Farber, and Harvard labs). Research titles that don't say
+what kind of research ("Research Assistant I") are kept only when the description asks for
+programming, since most of them are lab-bench or clinical jobs.
+
+**Hand-added jobs stay yours.** If a site later lists a job you added with "Add job" (same URL),
+the daily search links the two instead of adding a copy. Your title, notes, and status stay as
+they are, and the job is marked closed when the employer takes the posting down.
+
 **Adzuna** (a job-board aggregator, free key at developer.adzuna.com) catches employers that aren't
 in `sources.yaml`. It searches job titles around Boston from the last 14 days. Its copies of jobs
 from employers we already read directly are skipped (`aliases:` in `sources.yaml` covers other

@@ -5,7 +5,7 @@ Order, best fit first within each group:
   1. Postings whose stated start window reaches Settings.available_from (a "Summer 2027 new
      grad" program): the timing fits exactly. Most postings don't say; see timing.py.
   2. Until Settings.focus_until (default March 1, 2027):
-       software → hybrid (university tech) → program admin.
+       software → hybrid (university tech) and computational research → program admin.
      Software employers hire new grads months ahead; university and nonprofit admin roles
      usually hire a few weeks before the start date, and Kojo can't start until after
      graduating in May 2027. Admin matches stay visible on the site and can be tailored
@@ -21,7 +21,7 @@ from datetime import date
 from .models import STAFFING_AGENCY_TAG, JobForScoring, Settings
 from .timing import starts_in_time
 
-FOCUS_TRACK_RANK = {"software": 1, "hybrid": 2, "program_admin": 3}
+FOCUS_TRACK_RANK = {"software": 1, "hybrid": 2, "research": 2, "program_admin": 3}
 
 
 def in_focus_window(settings: Settings, today: date | None = None) -> bool:
