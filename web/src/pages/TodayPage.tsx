@@ -30,6 +30,7 @@ import {
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { EmptyState, PageHeader } from '@/components/EmptyState'
+import { ScoreNowBar } from '@/components/ScoreNowBar'
 import { StartCell, StartTags } from '@/components/StartDate'
 import { StatTile } from '@/components/StatTile'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -315,6 +316,7 @@ export function TodayPage() {
       />
 
       <SignInWarning />
+      <ScoreNowBar />
 
       {error && (
         <p role="alert" className="mb-4 text-sm text-destructive">

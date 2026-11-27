@@ -9,7 +9,15 @@ import pytest
 from jobsearch.llm import AuthExpiredError, ClaudeCode, LLMError, LLMResponse
 from jobsearch.models import JobForScoring, Settings
 from jobsearch.profile import load_profile
-from jobsearch.scoring import ScoreItem, batch_prompt, score_batch, system_prompt, to_score_row
+from jobsearch.scoring import (
+    ScoreItem,
+    batch_prompt,
+    run_scoring,
+    score_batch,
+    scoring_lock,
+    system_prompt,
+    to_score_row,
+)
 
 PROFILE = load_profile(Path(__file__).parent / "fixtures" / "profile_example.yaml")
 SETTINGS = Settings(fit_threshold=70)  # explicit, so the tests don't depend on the default
@@ -229,3 +237,54 @@ def test_request_listener_agent_stays_alive() -> None:
     assert d["ProgramArguments"][-2:] == ["jobsearch", "listen"]
     assert d["KeepAlive"] is True and d["RunAtLoad"] is True
     assert "StartCalendarInterval" not in d and "StartInterval" not in d
+
+
+# ---------- a whole run: the lock and "Score now" progress ----------
+
+
+def test_scoring_lock_waits_until_the_other_run_lets_go(tmp_path: Path) -> None:
+    import fcntl
+
+    lock = tmp_path / "scoring.lock"
+    lock.touch()
+    waits: list[int] = []
+    with lock.open("a") as other_run:
+        fcntl.flock(other_run, fcntl.LOCK_EX)
+
+        def on_wait() -> None:
+            waits.append(1)
+            if len(waits) == 2:
+                fcntl.flock(other_run, fcntl.LOCK_UN)  # the other run finishes
+
+        with scoring_lock(lock, on_wait=on_wait, poll=0):
+            assert len(waits) == 2
+    with scoring_lock(lock, on_wait=lambda: waits.append(1), poll=0):
+        assert len(waits) == 2  # free: no waiting
+
+
+def test_run_scoring_reports_progress_after_each_batch(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    from types import SimpleNamespace
+
+    from jobsearch import db, scoring
+
+    jobs = [job(i) for i in range(1, 13)]  # two batches: 10 + 2
+    monkeypatch.setattr(scoring, "SCORING_LOCK", tmp_path / "scoring.lock")
+    monkeypatch.setattr(db, "load_settings", lambda: SETTINGS)
+    monkeypatch.setattr(db, "latest_profile", lambda: SimpleNamespace(data=PROFILE.model_dump(mode="json")))
+    monkeypatch.setattr(db, "month_cost", lambda: 0.0)
+    monkeypatch.setattr(db, "jobs_to_score", lambda limit=None: jobs)
+    monkeypatch.setattr(db, "start_run", lambda kind: "run-1")
+    monkeypatch.setattr(db, "record_scores", lambda rows: len(rows))
+    monkeypatch.setattr(db, "finish_run", lambda run_id, **kw: None)
+    engine = FakeEngine([
+        [answer(f"job-{i}", 80 if i <= 3 else 40) for i in range(1, 11)],
+        [answer("job-11", 90), answer("job-12", 20)],
+    ])  # fmt: skip
+    seen: list[dict[str, int]] = []
+
+    s = run_scoring(engine=engine, on_progress=seen.append)
+    assert [(p["scored"], p["matches"]) for p in seen] == [(0, 0), (10, 3), (12, 4)]
+    assert all(p["total"] == 12 for p in seen)
+    assert s.progress() == {"total": 12, "scored": 12, "matches": 4, "below": 8, "failed": 0}

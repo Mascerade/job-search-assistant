@@ -8,18 +8,27 @@ hidden on the website as "below threshold", with the reason visible.
 
     uv run jobsearch score --dry-run     # score a few, print, save nothing
     uv run jobsearch score               # score everything waiting
+
+Scoring runs in three places, all on the Mac: the 7:30 morning run, "Score now" on the
+website's Today page, and `jobsearch score` in a terminal. A lock file makes them take
+turns, so no job is scored twice by runs that overlap.
 """
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import textwrap
-from collections.abc import Sequence
+import time
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field, ValidationError
 
+from .config import PIPELINE_DIR
 from .llm import AuthExpiredError, ClaudeCode, LLMError, LLMResponse
 from .models import JobForScoring, Settings, Track
 from .profile import Profile
@@ -27,6 +36,33 @@ from .timing import START_SCHEMA, TIMING_RULES, StartWindow, timing_excerpt
 
 BATCH_SIZE = 10
 DESCRIPTION_CHARS = 3500
+SCORING_LOCK = PIPELINE_DIR / "output" / "scoring.lock"
+LOCK_POLL_SECONDS = 15.0
+
+
+@contextlib.contextmanager
+def scoring_lock(
+    path: Path | None = None,
+    on_wait: Callable[[], None] | None = None,
+    poll: float = LOCK_POLL_SECONDS,
+) -> Iterator[None]:
+    """Hold the Mac-wide scoring lock. While another run holds it, call on_wait every `poll`
+    seconds and keep waiting. The OS releases the lock if a run crashes or is killed."""
+    path = path or SCORING_LOCK
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as f:
+        while True:
+            try:
+                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if on_wait is not None:
+                    on_wait()
+                time.sleep(poll)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
 
 
 class ScoreItem(BaseModel):
@@ -233,6 +269,7 @@ def to_score_row(item: ScoreItem, settings: Settings, resp: LLMResponse, share: 
 
 @dataclass
 class ScoringSummary:
+    total: int = 0  # jobs that were waiting when the run started
     scored: int = 0
     kept: int = 0
     below: int = 0
@@ -242,6 +279,16 @@ class ScoringSummary:
     credential_expires_at: datetime | None = None
     items: list[tuple[JobForScoring, ScoreItem]] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+
+    def progress(self) -> dict[str, int]:
+        """What "Score now" shows on the website while the run goes and when it's done."""
+        return {
+            "total": self.total,
+            "scored": self.scored,
+            "matches": self.kept,
+            "below": self.below,
+            "failed": self.failed,
+        }
 
 
 def _run_counts(summary: ScoringSummary) -> dict[str, int]:
@@ -263,6 +310,22 @@ def run_scoring(
     model: str = "sonnet",
     dry_run: bool = False,
     engine: ClaudeCode | None = None,
+    on_wait: Callable[[], None] | None = None,
+    on_progress: Callable[[dict[str, int]], None] | None = None,
+) -> ScoringSummary:
+    """Score the jobs waiting to be scored. on_wait is called while another scoring run holds
+    the lock; on_progress after the list is read and after each batch."""
+    with scoring_lock(on_wait=on_wait):
+        return _run_scoring(limit=limit, model=model, dry_run=dry_run, engine=engine, on_progress=on_progress)
+
+
+def _run_scoring(
+    *,
+    limit: int | None,
+    model: str,
+    dry_run: bool,
+    engine: ClaudeCode | None,
+    on_progress: Callable[[dict[str, int]], None] | None,
 ) -> ScoringSummary:
     from . import db
 
@@ -282,6 +345,9 @@ def run_scoring(
         return summary
 
     jobs = db.jobs_to_score(limit=limit)
+    summary.total = len(jobs)
+    if on_progress is not None:
+        on_progress(summary.progress())
     if not jobs:
         return summary
     engine = engine or ClaudeCode(model=model)
@@ -317,6 +383,8 @@ def run_scoring(
                     else:
                         summary.below += 1
                 missing.extend(j for j in batch if j.id not in {it.job_id for it in items})
+                if on_progress is not None:
+                    on_progress(summary.progress())
             pending = missing
             if not pending or attempt == 1:
                 break

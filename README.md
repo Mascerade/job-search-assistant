@@ -165,9 +165,21 @@ uv run jobsearch schedule status       # loaded? last exit code? recent log line
 uv run jobsearch local-daily           # what the daily job runs: Workday → score → tasks → tailor (20/day) → digest
 uv run jobsearch tailor --job <id>     # tailor one job now
 uv run jobsearch listen                # handle website button presses as they happen (Supabase Realtime)
+uv run jobsearch score                 # score everything waiting now (same as Score now on the site)
 uv run jobsearch eval report           # compare AI scores with your labels (private/eval/)
 uv run jobsearch digest --dry-run      # print the morning email and save output/digest-preview.html
 ```
+
+### Score now
+
+Jobs saved after the morning run (a late cloud run, Adzuna, a board you just added) normally wait
+for the next 7:30 run to be scored. When any are waiting, the Today page says how many and offers
+**Score now**: the site leaves a request, the Mac's listener runs the same scoring as the morning
+run (start dates included), and the page shows progress ("Scoring 12 of 23…") with matches
+appearing as each batch of ten finishes. It only scores; documents are still written by the
+morning run or **Tailor now**. If the Mac is asleep it starts when the Mac wakes. A lock file
+(`pipeline/output/scoring.lock`) makes the morning run, Score now, and `jobsearch score` take
+turns, so no job is scored twice.
 
 ### Morning digest
 

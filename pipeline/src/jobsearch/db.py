@@ -318,7 +318,7 @@ class JobHeader(BaseModel):
 class TaskRow(BaseModel):
     id: str
     job_id: str | None
-    kind: Literal["ingest", "tailor", "render", "regenerate"]
+    kind: Literal["ingest", "tailor", "render", "regenerate", "score"]
 
 
 def save_tailored(job_id: str, payload: dict[str, Any]) -> dict[str, Any]:
@@ -415,7 +415,7 @@ def queued_tasks(limit: int) -> list[TaskRow]:
     return _rows(data, TaskRow)
 
 
-def claim_task(task_id: str, step: Literal["writing", "rendering"]) -> bool:
+def claim_task(task_id: str, step: Literal["writing", "rendering", "scoring"]) -> bool:
     """Move a task from queued to working; False if another runner already took it."""
     data = (
         client().table("tasks").update({"step": step}).eq("id", task_id).eq("step", "queued").execute().data
@@ -424,9 +424,20 @@ def claim_task(task_id: str, step: Literal["writing", "rendering"]) -> bool:
 
 
 def update_task(
-    task_id: str, step: Literal["writing", "rendering", "ready", "error"], error: str | None = None
+    task_id: str,
+    step: Literal["writing", "rendering", "scoring", "ready", "error"],
+    error: str | None = None,
+    result: dict[str, Any] | None = None,
 ) -> None:
-    client().table("tasks").update({"step": step, "error": error}).eq("id", task_id).execute()
+    values: dict[str, Any] = {"step": step, "error": error}
+    if result is not None:
+        values["result"] = result
+    client().table("tasks").update(values).eq("id", task_id).execute()
+
+
+def set_task_result(task_id: str, result: dict[str, Any]) -> None:
+    """Progress for the website while a task works (also bumps updated_at, showing it's alive)."""
+    client().table("tasks").update({"result": result}).eq("id", task_id).execute()
 
 
 def unreviewed_jobs() -> list[JobForScoring]:

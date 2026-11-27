@@ -175,14 +175,14 @@ isOneToOne: false
                   ]
                 },"tasks": {
                   Row: {
-                    "created_at": string,"error": string | null,"id": string,"input": NonNullable<Json>,"job_id": string | null,"kind": string,"step": string,"updated_at": string
+                    "created_at": string,"error": string | null,"id": string,"input": NonNullable<Json>,"job_id": string | null,"kind": string,"result": Json | null,"step": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"error"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"job_id"?: string | null,"kind": string,"step"?: string,"updated_at"?: string
+                    "created_at"?: string,"error"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"job_id"?: string | null,"kind": string,"result"?: Json | null,"step"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "created_at"?: string,"error"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"job_id"?: string | null,"kind"?: string,"step"?: string,"updated_at"?: string
+                    "created_at"?: string,"error"?: string | null,"id"?: string,"input"?: NonNullable<Json>,"job_id"?: string | null,"kind"?: string,"result"?: Json | null,"step"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {

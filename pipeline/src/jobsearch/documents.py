@@ -348,13 +348,18 @@ def process_tasks(limit: int = 10) -> list[str]:
 
     done: list[str] = []
     tasks = db.queued_tasks(limit)
-    if not tasks:
-        return done
-    row = db.latest_profile()
-    if row is None:
-        return ["no master profile uploaded yet"]
-    profile = Profile.model_validate(row.data)
+    profile: Profile | None = None
     for task in tasks:
+        if task.kind == "score":
+            line = score_task(task.id)
+            if line:
+                done.append(line)
+            continue
+        if profile is None:
+            row = db.latest_profile()
+            if row is None:
+                return [*done, "no master profile uploaded yet"]
+            profile = Profile.model_validate(row.data)
         if task.job_id is None:
             db.update_task(task.id, "error", "task has no job")
             continue
@@ -381,3 +386,34 @@ def process_tasks(limit: int = 10) -> list[str]:
             db.update_task(task.id, "error", str(e)[:300])
             done.append(f"{task.kind} {task.job_id}: error: {e}")
     return done
+
+
+def score_task(task_id: str) -> str | None:
+    """ "Score now" on the Today page: score every job waiting to be scored, reporting progress
+    on the task as each batch finishes. None if another runner already took the task."""
+    from . import db
+    from .scoring import run_scoring
+
+    if not db.claim_task(task_id, "scoring"):
+        return None
+    try:
+        s = run_scoring(
+            on_wait=lambda: db.set_task_result(task_id, {"waiting": True}),
+            on_progress=lambda progress: db.set_task_result(task_id, progress),
+        )
+    except AuthExpiredError:
+        db.update_task(task_id, "error", "Claude Code sign-in expired on the Mac")
+        raise
+    except Exception as e:  # noqa: BLE001 (the website shows the error instead of waiting forever)
+        db.update_task(task_id, "error", str(e)[:300])
+        return f"score: error: {e}"
+    if s.skipped_reason:
+        reason = s.skipped_reason[:1].upper() + s.skipped_reason[1:]
+        db.update_task(task_id, "error", f"{reason}.", s.progress())
+        return f"score: skipped ({s.skipped_reason})"
+    if s.scored == 0 and s.failed:
+        error = s.errors[0] if s.errors else "no scores came back"
+        db.update_task(task_id, "error", error[:300], s.progress())
+        return f"score: {s.failed} failed"
+    db.update_task(task_id, "ready", None, s.progress())
+    return f"score: {s.scored} scored, {s.kept} matches, {s.below} below threshold, {s.failed} failed"

@@ -1,6 +1,6 @@
 -- Security + trigger tests for the initial schema. Run with: npx supabase test db
 begin;
-select plan(17);
+select plan(19);
 
 -- Two throwaway users: one registered as owner, one not.
 insert into auth.users (id, email, aud, role)
@@ -71,6 +71,16 @@ select throws_ok(
 select lives_ok(
   $$ insert into public.tasks (job_id, kind) values ('aaaaaaaa-0000-0000-0000-000000000002', 'render') $$,
   'owner can request a task'
+);
+
+select lives_ok(
+  $$ insert into public.tasks (kind) values ('score') $$,
+  'owner can ask the Mac to score waiting jobs now'
+);
+
+select throws_ok(
+  $$ insert into public.tasks (job_id, kind) values ('aaaaaaaa-0000-0000-0000-000000000002', 'score') $$,
+  '23514', null, 'a score task is not about one job'
 );
 
 select isnt(
